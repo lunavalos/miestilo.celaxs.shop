@@ -203,7 +203,7 @@ export default function CheckoutForm({ selectedBrand, selectedModel, layers, upd
             </div>
             <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#059669', marginBottom: '0.5rem' }}>¡Pedido Realizado!</h2>
             <p style={{ color: '#6b7280', fontFamily: 'var(--font-secondary)' }}>
-                Gracias por tu compra. Recibirás un correo de confirmación en breve.
+                Gracias por tu compra
             </p>
             <Link href="/" className="btn btn-primary" style={{ marginTop: '2rem', display: 'inline-block' }}>
                 Volver al Inicio
