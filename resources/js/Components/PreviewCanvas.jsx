@@ -1,11 +1,11 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 'react';
 
 const CANVAS_W = 300;
 const CANVAS_H = 600;
 const HANDLE_SIZE = 10;
 const ROTATE_DIST = 28;
 
-export default function PreviewCanvas({
+const PreviewCanvas = forwardRef(({
     layers,
     updateLayer,
     transparentImage,
@@ -13,7 +13,7 @@ export default function PreviewCanvas({
     selectedLayerId,
     setSelectedLayerId,
     onDeleteLayer,
-}) {
+}, ref) => {
     const canvasRef = useRef(null);
     const bufferRef = useRef(null);
     const clipBufferRef = useRef(null);
@@ -21,6 +21,15 @@ export default function PreviewCanvas({
     const [maskImg, setMaskImg] = useState(null);
     const [interaction, setInteraction] = useState(null);
     const [loading, setLoading] = useState(true);
+
+    // Exponer método para captura
+    useImperativeHandle(ref, () => ({
+        getScreenshot: () => {
+            const canvas = canvasRef.current;
+            if (!canvas) return null;
+            return canvas.toDataURL('image/png');
+        }
+    }));
 
     // Inicializar buffers una sola vez
     useEffect(() => {
@@ -431,4 +440,6 @@ export default function PreviewCanvas({
             onMouseLeave={handleMouseUp}
         />
     );
-}
+});
+
+export default PreviewCanvas;

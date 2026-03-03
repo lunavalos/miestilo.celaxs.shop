@@ -281,7 +281,7 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
                                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                         <thead>
                                             <tr style={{ background: '#f9fafb' }}>
-                                                {['#', 'Cliente', 'Modelo', 'Estado', 'Fecha'].map(h => (
+                                                {['#', 'Diseño', 'Cliente', 'Modelo', 'Estado', 'Fecha'].map(h => (
                                                     <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.8rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase' }}>{h}</th>
                                                 ))}
                                             </tr>
@@ -290,6 +290,22 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
                                             {orders.map(order => (
                                                 <tr key={order.id} style={{ borderTop: '1px solid #f3f4f6' }}>
                                                     <td style={{ padding: '0.75rem 1rem', color: '#6b7280', fontSize: '0.9rem' }}>#{order.id}</td>
+                                                    <td style={{ padding: '0.75rem 1rem' }}>
+                                                        {order.preview_image ? (
+                                                            <div
+                                                                style={{ width: '50px', height: '100px', background: '#f3f4f6', borderRadius: '4px', overflow: 'hidden', cursor: 'pointer', border: '1px solid #e5e7eb' }}
+                                                                onClick={() => {
+                                                                    const win = window.open('', '_blank');
+                                                                    win.document.write(`<img src="${order.preview_image}" style="max-width:100%; height:auto;">`);
+                                                                }}
+                                                                title="Clic para ver diseño completo"
+                                                            >
+                                                                <img src={order.preview_image} alt="Diseño" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                            </div>
+                                                        ) : (
+                                                            <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Sin diseño</span>
+                                                        )}
+                                                    </td>
                                                     <td style={{ padding: '0.75rem 1rem', fontWeight: '600', fontSize: '0.9rem' }}>{order.customer_email || '—'}</td>
                                                     <td style={{ padding: '0.75rem 1rem', color: '#6b7280', fontSize: '0.9rem' }}>{order.phone_model?.name || '—'}</td>
                                                     <td style={{ padding: '0.75rem 1rem' }}>

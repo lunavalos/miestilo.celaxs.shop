@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link } from '@inertiajs/react';
 import axios from 'axios';
 import PreviewCanvas from '@/Components/PreviewCanvas';
@@ -38,6 +38,7 @@ export default function CheckoutForm({ selectedBrand, selectedModel, layers, upd
     const [stripeInstance, setStripeInstance] = useState(null);
     const [cardInstance, setCardInstance] = useState(null);
     const [paymentConfig, setPaymentConfig] = useState({ is_active: true, message: '' });
+    const previewRef = useRef(null);
 
     // Initial config for Stripe
     React.useEffect(() => {
@@ -111,11 +112,15 @@ export default function CheckoutForm({ selectedBrand, selectedModel, layers, upd
         setError('');
 
         try {
+            // Capture screenshot
+            const preview_image = previewRef.current?.getScreenshot();
+
             // 1. Prepare (Create preorder + intent)
             const prepareRes = await axios.post('/api/orders/prepare', {
                 customer_email: form.customer_email,
                 model_id: selectedModel?.id,
                 customization_data: { layers },
+                preview_image: preview_image,
                 total_price: TOTAL,
                 shipping_price: SHIPPING,
                 first_name: form.first_name,
@@ -598,6 +603,7 @@ export default function CheckoutForm({ selectedBrand, selectedModel, layers, upd
                                     <div style={{ position: 'relative', width: '200px', height: '400px', background: 'white', borderRadius: '16px', boxShadow: '0 8px 24px rgba(0,0,0,0.1)', overflow: 'visible' }}>
                                         <div style={{ transform: 'scale(0.67)', transformOrigin: 'top left', width: '300px', height: '600px' }}>
                                             <PreviewCanvas
+                                                ref={previewRef}
                                                 layers={layers}
                                                 updateLayer={updateLayer || (() => { })}
                                                 transparentImage={getImageUrl ? getImageUrl(selectedModel.image_transparent) : selectedModel.image_transparent}
