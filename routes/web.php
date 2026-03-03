@@ -37,7 +37,11 @@ Route::prefix('api')->group(function () {
     Route::get('/brands', [BrandController::class, 'index']);
     Route::get('/models', [ModelController::class, 'index']);
     Route::get('/models/{model}', [ModelController::class, 'show']);
-    Route::post('/orders', [OrderController::class, 'store']);
+
+    // Public Orders & Payments
+    Route::post('/orders/prepare', [OrderController::class, 'prepare']);
+    Route::post('/orders/confirm', [OrderController::class, 'confirm']);
+    Route::get('/payments/config', [OrderController::class, 'getPaymentConfig']);
 
     // Admin routes (autenticado)
     Route::middleware('auth')->group(function () {
@@ -47,6 +51,13 @@ Route::prefix('api')->group(function () {
         // Usuarios
         Route::post('/admin/users', [\App\Http\Controllers\Api\UserController::class, 'store']);
         Route::delete('/admin/users/{user}', [\App\Http\Controllers\Api\UserController::class, 'destroy']);
+
+        // Módulo Profesional Stripe / Pagos
+        Route::prefix('admin')->group(function () {
+            Route::get('/stripe-settings', [\App\Http\Controllers\Admin\StripeSettingController::class, 'index']);
+            Route::put('/stripe-settings', [\App\Http\Controllers\Admin\StripeSettingController::class, 'update']); // Usamos update para persistir
+            Route::post('/stripe-settings/test', [\App\Http\Controllers\Admin\StripeSettingController::class, 'testConnection']);
+        });
     });
 });
 
@@ -55,7 +66,7 @@ Route::get('/personalizar', function () {
     return Inertia::render('Customizer');
 })->name('customizer');
 
-// Admin Pages
+// Admin Pages (Inertia Renders)
 Route::middleware(['auth'])->prefix('admin')->group(function () {
     Route::get('/dashboard', function () {
         return Inertia::render('Admin/Dashboard', [
@@ -65,7 +76,19 @@ Route::middleware(['auth'])->prefix('admin')->group(function () {
             'users' => User::orderBy('name')->get(['id', 'name', 'email', 'is_admin', 'created_at']),
         ]);
     })->name('admin.dashboard');
+
+    Route::get('/payment-gateway', function () {
+        return Inertia::render('Admin/PaymentGateway');
+    })->name('admin.payments');
+
+    Route::get('/stripe-settings', function () {
+        return \Inertia\Inertia::render('Admin/StripeSettings');
+    })->name('admin.stripe.settings');
 });
+
+// Webhooks (Public)
+Route::post('/api/payments/webhook/stripe', [\App\Http\Controllers\Api\PaymentWebhookController::class, 'stripe']);
+Route::post('/api/payments/webhook/mercadopago', [\App\Http\Controllers\Api\PaymentWebhookController::class, 'mercadopago']);
 
 require __DIR__ . '/auth.php';
 

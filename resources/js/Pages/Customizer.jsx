@@ -136,7 +136,7 @@ export default function Customizer({ auth }) {
                 return (
                     <div className="tool-panel">
                         <h4 style={{ marginBottom: '1rem', fontWeight: '700' }}>Color de Fondo</h4>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px', marginBottom: '1rem' }}>
+                        <div style={{ display: 'grid', placeItems: 'center', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px', marginBottom: '1rem' }}>
                             {['#FFFFFF', '#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#00FFFF', '#FF00FF', '#EC008C', '#01A0AD', '#FFA500', '#800080', '#A52A2A', '#808080', '#FFC0CB'].map(color => (
                                 <div
                                     key={color}
@@ -328,7 +328,7 @@ export default function Customizer({ auth }) {
 
             {/* ── PASO 4: Checkout a pantalla completa (dos columnas propias) ── */}
             {step === 4 && (
-                <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '1.5rem 1rem 3rem' }}>
+                <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '1.5rem 1rem 3rem' }}>
                     {/* Botón Anterior */}
                     <div style={{ marginBottom: '1rem' }}>
                         <button

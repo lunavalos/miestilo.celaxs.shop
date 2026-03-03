@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage, router } from '@inertiajs/react';
 
 export default function AdminLayout({ children, activeTab, onTabChange }) {
     const { auth } = usePage().props;
@@ -11,11 +11,18 @@ export default function AdminLayout({ children, activeTab, onTabChange }) {
         { id: 'models', icon: 'fa-mobile-alt', label: 'Modelos' },
         { id: 'orders', icon: 'fa-shopping-bag', label: 'Pedidos' },
         { id: 'users', icon: 'fa-users', label: 'Usuarios' },
+        { id: 'stripe_settings', icon: 'fab fa-stripe', label: 'Stripe / Pagos', href: route('admin.stripe.settings') },
     ];
 
     const handleNavClick = (item) => {
         if (item.href) return; // Link handles navigation
-        onTabChange && onTabChange(item.id);
+
+        if (onTabChange) {
+            onTabChange(item.id);
+        } else {
+            // Si no estamos en el dashboard (donde onTabChange existe), navegamos a él
+            router.get(route('admin.dashboard'), { tab: item.id });
+        }
         setMenuOpen(false);
     };
 
@@ -198,6 +205,7 @@ export default function AdminLayout({ children, activeTab, onTabChange }) {
                     height: 100vh;
                     position: sticky;
                     top: 0;
+                    z-index: 100; /* Asegura que el sidebar siempre esté encima */
                 }
 
                 .admin-topbar {

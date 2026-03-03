@@ -22,7 +22,6 @@ export default function CheckoutForm({ selectedBrand, selectedModel, layers, upd
         address_line1: '', address_line2: '',
         city: '', state: 'Coahuila', zip_code: '',
         phone: '', customer_email: '', order_notes: '',
-        card_number: '', card_expiry: '', card_cvv: '',
         agreed_terms: false, coupon_code: '',
         ship_to_different_address: false,
         shipping_first_name: '', shipping_last_name: '', shipping_country: 'México',
@@ -33,34 +32,87 @@ export default function CheckoutForm({ selectedBrand, selectedModel, layers, upd
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
+    const [showTerms, setShowTerms] = useState(false);
+
+    // Stripe Vanilla Elements state
+    const [stripeInstance, setStripeInstance] = useState(null);
+    const [cardInstance, setCardInstance] = useState(null);
+    const [paymentConfig, setPaymentConfig] = useState({ is_active: true, message: '' });
+
+    // Initial config for Stripe
+    React.useEffect(() => {
+        const initStripe = async () => {
+            try {
+                const res = await axios.get('/api/payments/config');
+                setPaymentConfig(res.data);
+
+                if (res.data.is_active && res.data.publishable_key) {
+                    await loadScript('https://js.stripe.com/v3/');
+                    if (!window.Stripe) return;
+
+                    const stripe = window.Stripe(res.data.publishable_key);
+                    const elements = stripe.elements();
+                    const card = elements.create('card', {
+                        hidePostalCode: true,
+                        style: {
+                            base: {
+                                fontSize: '16px',
+                                color: '#374151',
+                                fontFamily: 'var(--font-primary), sans-serif',
+                                '::placeholder': { color: '#9ca3af' },
+                                padding: '10px 12px',
+                            },
+                            invalid: { color: '#991b1b' },
+                        }
+                    });
+
+                    // Mount card element
+                    const mountInterval = setInterval(() => {
+                        const el = document.getElementById('card-element');
+                        if (el) {
+                            card.mount('#card-element');
+                            setStripeInstance(stripe);
+                            setCardInstance(card);
+                            clearInterval(mountInterval);
+                        }
+                    }, 100);
+
+                    return () => clearInterval(mountInterval);
+                }
+            } catch (err) {
+                console.error("Error loading Stripe config:", err);
+            }
+        };
+        initStripe();
+    }, []);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
     };
 
-    const handleCardNumber = (e) => {
-        let val = e.target.value.replace(/\D/g, '').substring(0, 16);
-        val = val.replace(/(.{4})/g, '$1 ').trim();
-        setForm(prev => ({ ...prev, card_number: val }));
-    };
 
-    const handleExpiry = (e) => {
-        let val = e.target.value.replace(/\D/g, '').substring(0, 4);
-        if (val.length > 2) val = val.substring(0, 2) + '/' + val.substring(2);
-        setForm(prev => ({ ...prev, card_expiry: val }));
+    // Helpers para cargar scripts
+    const loadScript = (src) => {
+        return new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = () => resolve(true);
+            script.onerror = () => resolve(false);
+            document.body.appendChild(script);
+        });
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!form.agreed_terms) { setError('Debes aceptar los términos y condiciones.'); return; }
-        if (!form.card_number || form.card_number.replace(/\s/g, '').length < 16) {
-            setError('Ingresa un número de tarjeta válido.'); return;
-        }
+
         setLoading(true);
         setError('');
+
         try {
-            await axios.post('/api/orders', {
+            // 1. Prepare (Create preorder + intent)
+            const prepareRes = await axios.post('/api/orders/prepare', {
                 customer_email: form.customer_email,
                 model_id: selectedModel?.id,
                 customization_data: { layers },
@@ -77,7 +129,6 @@ export default function CheckoutForm({ selectedBrand, selectedModel, layers, upd
                 phone: form.phone,
                 order_notes: form.order_notes,
                 payment_method: 'card',
-                // Shipping fields
                 ...(form.ship_to_different_address ? {
                     shipping_first_name: form.shipping_first_name,
                     shipping_last_name: form.shipping_last_name,
@@ -90,7 +141,47 @@ export default function CheckoutForm({ selectedBrand, selectedModel, layers, upd
                     shipping_phone: form.shipping_phone,
                 } : {})
             });
-            setSuccess(true);
+
+            if (!prepareRes.data.success) {
+                setError(prepareRes.data.message || 'Error al preparar el pedido.');
+                setLoading(false);
+                return;
+            }
+
+            const { client_secret, order_id } = prepareRes.data;
+
+            // 2. Stripe Confirm
+            const { paymentIntent, error: stripeError } = await stripeInstance.confirmCardPayment(client_secret, {
+                payment_method: {
+                    card: cardInstance,
+                    billing_details: {
+                        name: `${form.first_name} ${form.last_name}`,
+                        email: form.customer_email,
+                    },
+                }
+            });
+
+            if (stripeError) {
+                setError(`Error en el pago: ${stripeError.message}`);
+                setLoading(false);
+                return;
+            }
+
+            // 3. Server Finalize
+            if (paymentIntent.status === 'succeeded') {
+                const confirmRes = await axios.post('/api/orders/confirm', {
+                    order_id: order_id,
+                    payment_intent_id: paymentIntent.id
+                });
+
+                if (confirmRes.data.success) {
+                    setSuccess(true);
+                    setLoading(false);
+                } else {
+                    setError(confirmRes.data.message || 'Error al confirmar el pedido final.');
+                    setLoading(false);
+                }
+            }
         } catch (err) {
             const errors = err.response?.data?.errors;
             if (errors) setError(Object.values(errors).flat().join(', '));
@@ -133,6 +224,16 @@ export default function CheckoutForm({ selectedBrand, selectedModel, layers, upd
                 .order-row-label { color: var(--color-primary); font-weight: 600; }
                 .order-row-value { color: var(--color-primary); font-weight: 700; }
                 .order-divider { border: none; border-top: 1px solid #e5e7eb; margin: 0.5rem 0; }
+                .card-header-label { font-size: 0.95rem; font-weight: 700; color: #1f2937; margin-bottom: 0.5rem; display: block; }
+                #card-element { 
+                    padding: 0.75rem; 
+                    border: 1px solid #d1d5db; 
+                    border-radius: 4px; 
+                    background: white; 
+                    min-height: 40px; 
+                    transition: border 0.2s;
+                }
+                #card-element.StripeElement--focus { border-color: var(--color-primary); box-shadow: 0 0 0 2px rgba(1,160,173,0.1); }
                 .checkout-card-icons-inside { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: flex; gap: 3px; pointer-events: none; }
                 .payment-section-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
                 .terms-text { font-size: 0.82rem; color: #6b7280; line-height: 1.5; margin: 1rem 0; }
@@ -332,13 +433,13 @@ export default function CheckoutForm({ selectedBrand, selectedModel, layers, upd
                         </div>
 
                         {/* Cupón */}
-                        <div className="checkout-section" style={{ padding: '1rem 1.5rem', borderRadius: '10px', boxShadow: '0px 0px 6px 0px rgba(0, 0, 0, 0.12)' }}>
+                        {/* <div className="checkout-section" style={{ padding: '1rem 1.5rem', borderRadius: '10px', boxShadow: '0px 0px 6px 0px rgba(0, 0, 0, 0.12)' }}>
                             <div className="coupon-row">
                                 <span className="coupon-text">¿TIENES UN CUPÓN?</span>
                                 <input type="text" placeholder="" value={form.coupon_code} onChange={e => setForm(p => ({ ...p, coupon_code: e.target.value }))} />
                                 <button type="button" className="coupon-btn">APLICAR AQUÍ</button>
                             </div>
-                        </div>
+                        </div>*/}
 
                         {/* Pago con Tarjeta */}
                         <div className="checkout-section" style={{ borderRadius: '10px', boxShadow: '0px 0px 6px 0px rgba(0, 0, 0, 0.12)' }}>
@@ -365,55 +466,18 @@ export default function CheckoutForm({ selectedBrand, selectedModel, layers, upd
                                 </div>
                             </div>
 
-                            {/* Card Number */}
-                            <div style={{ marginBottom: '0.85rem' }}>
-                                <label className="checkout-label">Número de tarjeta</label>
-                                <div style={{ position: 'relative' }}>
-                                    <input
-                                        className="checkout-input"
-                                        type="text"
-                                        placeholder="1234 1234 1234 1234"
-                                        value={form.card_number}
-                                        onChange={handleCardNumber}
-                                        maxLength={19}
-                                        style={{ paddingRight: '110px' }}
-                                    />
-                                    <div className="checkout-card-icons-inside">
-                                        <svg width="28" height="18" viewBox="0 0 34 22"><rect width="34" height="22" fill="white" stroke="#e5e7eb" /><text x="50%" y="55%" dominantBaseline="middle" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#1A1F71" fontFamily="Arial">VISA</text></svg>
-                                        <svg width="28" height="18" viewBox="0 0 34 22"><rect width="34" height="22" fill="white" stroke="#e5e7eb" /><circle cx="13" cy="11" r="7" fill="#EB001B" opacity="0.9" /><circle cx="21" cy="11" r="7" fill="#F79E1B" opacity="0.9" /><ellipse cx="17" cy="11" rx="3" ry="7" fill="#FF5F00" opacity="0.85" /></svg>
-                                        <svg width="28" height="18" viewBox="0 0 34 22"><rect width="34" height="22" fill="#016FD0" /><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fontSize="7" fontWeight="bold" fill="white" fontFamily="Arial">AMEX</text></svg>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Expiry + CVV */}
-                            <div className="checkout-row-2">
-                                <div>
-                                    <label className="checkout-label">Fecha de caducidad</label>
-                                    <input className="checkout-input" type="text" placeholder="MM / AA" value={form.card_expiry} onChange={handleExpiry} maxLength={5} />
-                                </div>
-                                <div>
-                                    <label className="checkout-label">Código de seguridad</label>
-                                    <div style={{ position: 'relative' }}>
-                                        <input
-                                            className="checkout-input"
-                                            type="text"
-                                            placeholder="CVC"
-                                            name="card_cvv"
-                                            value={form.card_cvv}
-                                            onChange={e => setForm(p => ({ ...p, card_cvv: e.target.value.replace(/\D/, '').substring(0, 4) }))}
-                                            maxLength={4}
-                                            style={{ paddingRight: '36px' }}
-                                        />
-                                        <i className="fas fa-credit-card" style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: '0.9rem', pointerEvents: 'none' }}></i>
-                                    </div>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label className="card-header-label">Datos de la Tarjeta</label>
+                                <div id="card-element">
+                                    {/* Aquí se montará Stripe CardElement */}
+                                    <div style={{ padding: '0.4rem', color: '#6b7280', fontSize: '0.85rem' }}>Cargando formulario de pago seguro...</div>
                                 </div>
                             </div>
 
                             {/* Privacy notice */}
                             <p className="terms-text">
                                 Your personal data will be used to process your order, support your experience throughout
-                                this website, and for other purposes described in our <a href="#">política de privacidad</a>.
+                                this website, and for other purposes described in our <a href="https://celaxs.shop/aviso-de-privacidad/">política de privacidad</a>.
                             </p>
 
                             {/* Terms */}
@@ -428,16 +492,100 @@ export default function CheckoutForm({ selectedBrand, selectedModel, layers, upd
                                 />
                                 <label htmlFor="agreed_terms" style={{ fontSize: '0.85rem', color: '#374151', lineHeight: '1.5', cursor: 'pointer' }}>
                                     He leído y estoy de acuerdo con los{' '}
-                                    <a href="#" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}>términos y condiciones</a>{' '}
+                                    <a
+                                        href="#"
+                                        onClick={(e) => { e.preventDefault(); setShowTerms(!showTerms); }}
+                                        style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}
+                                    >
+                                        términos y condiciones
+                                    </a>{' '}
                                     de la web <span style={{ color: 'var(--color-secondary)' }}>*</span>
                                 </label>
                             </div>
 
+                            {/* Terms & Conditions Box */}
+                            {showTerms && (
+                                <div style={{
+                                    background: '#f9fafb',
+                                    border: '1px solid #e5e7eb',
+                                    borderRadius: '8px',
+                                    padding: '1rem',
+                                    marginBottom: '1rem',
+                                    maxHeight: '200px',
+                                    overflowY: 'auto',
+                                    fontSize: '0.8rem',
+                                    color: '#4b5563',
+                                    lineHeight: '1.6',
+                                    boxShadow: 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.05)'
+                                }}>
+                                    <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#1f2937', marginBottom: '0.5rem' }}>Términos y Condiciones</h3>
+                                    <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '1rem' }}>Última actualización: [27/08/2025]</p>
+
+                                    <p>Bienvenido(a) a Celaxs.shop. Estos Términos y Condiciones regulan el uso de nuestro sitio web, así como la compra de productos en línea. Al acceder, navegar o comprar en nuestra tienda, aceptas expresamente los términos descritos a continuación.</p>
+
+                                    <p><strong>1. Información General</strong><br />
+                                        Celaxs.shop tiene domicilio en HAITI AMPLIACION 26 DE MARZO, SALTILLO COAHUILA CP 25086.<br />
+                                        Nos dedicamos a la venta de accesorios innovadores para celulares.</p>
+
+                                    <p><strong>2. Uso del Sitio</strong><br />
+                                        Al acceder a Celaxs.shop te comprometes a utilizar el sitio únicamente para fines legales.<br />
+                                        Está prohibido realizar actividades fraudulentas, copiar contenido, alterar información o intentar acceder sin autorización a nuestros sistemas.</p>
+
+                                    <p><strong>3. Productos</strong><br />
+                                        Todos los productos mostrados en Celaxs.shop son originales, nuevos y garantizados.<br />
+                                        Las imágenes son ilustrativas, pueden existir ligeras variaciones de color o diseño dependiendo del dispositivo o lote de fabricación.<br />
+                                        La disponibilidad de productos está sujeta a cambios sin previo aviso.</p>
+
+                                    <p><strong>4. Precios y Pagos</strong><br />
+                                        Los precios están expresados en pesos mexicanos (MXN) e incluyen IVA, salvo que se indique lo contrario.<br />
+                                        Aceptamos métodos de pago: tarjeta de crédito/débito.<br />
+                                        El pago debe acreditarse para procesar el pedido.</p>
+
+                                    <p><strong>5. Envíos y Entregas</strong><br />
+                                        Realizamos envíos a todo México mediante paqueterías como DHL, FedEx, Estafeta, etc.<br />
+                                        Los tiempos de entrega estimados son de 5 a 14 días hábiles, dependiendo de la ubicación.<br />
+                                        Una vez entregado el pedido a la paquetería, Celaxs.shop no se hace responsable por retrasos ajenos a nuestra operación.<br />
+                                        Proporcionaremos un número de guía para rastreo.</p>
+
+                                    <p><strong>6. Devoluciones y Garantías</strong><br />
+                                        El cliente podrá solicitar cambio o devolución dentro de los 7 días posteriores a la recepción, siempre que el producto esté en condiciones originales, sin uso y con empaque completo.<br />
+                                        Los costos de envío por devoluciones corren a cargo del cliente, salvo que el error sea atribuible a Celaxs.shop.<br />
+                                        No aplica garantía por mal uso, golpes, humedad o manipulación indebida.</p>
+
+                                    <p><strong>7. Responsabilidad</strong><br />
+                                        Celaxs.shop no se responsabiliza por daños indirectos o derivados del mal uso de los productos.<br />
+                                        El uso de accesorios en dispositivos de terceros es responsabilidad del comprador.</p>
+
+                                    <p><strong>8. Privacidad y Protección de Datos</strong><br />
+                                        En Celaxs.shop protegemos tu información de acuerdo con la Ley Federal de Protección de Datos Personales en Posesión de los Particulares.<br />
+                                        Consulta nuestro Aviso de Privacidad para más detalles sobre el tratamiento de tus datos.</p>
+
+                                    <p><strong>9. Modificaciones</strong><br />
+                                        Celaxs.shop se reserva el derecho de modificar en cualquier momento estos Términos y Condiciones.<br />
+                                        Las modificaciones entrarán en vigor desde su publicación en el sitio web.</p>
+
+                                    <p><strong>10. Contacto</strong><br />
+                                        Para aclaraciones, dudas o reclamos, puedes escribirnos a:<br />
+                                        📧 contacto@celaxs.shop<br />
+                                        📞 8448791900</p>
+                                </div>
+                            )}
+
                             {/* Botón de pago */}
-                            <button type="submit" className="btn-realizar" disabled={loading}>
+                            {!paymentConfig.is_active && (
+                                <div style={{ padding: '1rem', background: '#fee2e2', color: '#991b1b', borderRadius: '4px', marginBottom: '1.5rem', fontSize: '0.85rem' }}>
+                                    <i className="fas fa-exclamation-triangle"></i> Pago no disponible: {paymentConfig.message || 'Configuración incompleta'}. Contacta al administrador.
+                                </div>
+                            )}
+                            <button
+                                type="submit"
+                                className="btn-realizar"
+                                disabled={loading || !paymentConfig.is_active}
+                                style={{ opacity: (loading || !paymentConfig.is_active) ? 0.7 : 1 }}
+                            >
                                 {loading
                                     ? <><i className="fas fa-spinner fa-spin"></i> Procesando...</>
-                                    : 'REALIZAR EL PEDIDO'
+                                    : <><i className="fas fa-lock"></i> REALIZAR EL PEDIDO ({TOTAL} MXN)</>
                                 }
                             </button>
                         </div>
