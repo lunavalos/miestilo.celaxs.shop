@@ -243,7 +243,7 @@ export default function StripeSettings() {
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                        <div style={{ background: '#0f172a', borderRadius: '12px', padding: '1.5rem', color: 'white', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                        {/* <div style={{ background: '#0f172a', borderRadius: '12px', padding: '1.5rem', color: 'white', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
                             <h3 style={{ margin: '0 0 1rem', fontSize: '0.85rem', fontWeight: '800', textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.05em' }}>
                                 Endpoint de Webhook
                             </h3>
@@ -253,7 +253,7 @@ export default function StripeSettings() {
                             <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.75rem', borderRadius: '8px', fontSize: '0.7rem', fontFamily: 'monospace', wordBreak: 'break-all', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }} onClick={() => { navigator.clipboard.writeText(getWebhookUrl()); alert('URL copiada'); }}>
                                 {getWebhookUrl()}
                             </div>
-                        </div>
+                        </div> */}
 
                         <div style={{ background: 'white', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
                             <h3 style={{ margin: '0 0 1rem', fontSize: '0.85rem', fontWeight: '800', color: '#1f2937' }}>Estado del Canal</h3>
