@@ -21,7 +21,7 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
 
     // ---- Usuarios ----
     const [showUserModal, setShowUserModal] = useState(false);
-    const [userForm, setUserForm] = useState({ name: '', email: '', password: '', password_confirmation: '', is_admin: false });
+    const [userForm, setUserForm] = useState({ name: '', email: '', password: '', password_confirmation: '', is_admin: true });
     const [userLoading, setUserLoading] = useState(false);
     const [userError, setUserError] = useState('');
 
@@ -85,7 +85,7 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
                 is_admin: userForm.is_admin,
             });
             setShowUserModal(false);
-            setUserForm({ name: '', email: '', password: '', password_confirmation: '', is_admin: false });
+            setUserForm({ name: '', email: '', password: '', password_confirmation: '', is_admin: true });
             router.reload();
         } catch (err) {
             const errors = err.response?.data?.errors;
@@ -480,10 +480,7 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
                                 <label style={labelStyle}>Confirmar Contraseña *</label>
                                 <input type="password" style={inputStyle} placeholder="Repite la contraseña" value={userForm.password_confirmation} onChange={e => setUserForm({ ...userForm, password_confirmation: e.target.value })} required />
                             </div>
-                            <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <input type="checkbox" id="is_admin" checked={userForm.is_admin} onChange={e => setUserForm({ ...userForm, is_admin: e.target.checked })} style={{ width: '18px', height: '18px', cursor: 'pointer' }} />
-                                <label htmlFor="is_admin" style={{ ...labelStyle, marginBottom: 0, cursor: 'pointer' }}>¿Es administrador?</label>
-                            </div>
+                            {/* All new users are admins by default as per request */}
                             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
                                 <button type="button" onClick={() => setShowUserModal(false)} style={{ padding: '0.6rem 1.2rem', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>Cancelar</button>
                                 <button type="submit" style={btnPrimary} disabled={userLoading}>
