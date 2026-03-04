@@ -30,6 +30,7 @@ class ModelController extends Controller
         $validated = $request->validate([
             'brand_id' => 'required|exists:brands,id',
             'name' => 'required|string|max:255',
+            'price' => 'required|numeric|min:0',
             'image_normal' => 'required|image',
             'image_transparent' => 'required|image',
             'active' => 'boolean',
@@ -54,6 +55,7 @@ class ModelController extends Controller
         $validated = $request->validate([
             'brand_id' => 'exists:brands,id',
             'name' => 'string|max:255',
+            'price' => 'numeric|min:0',
             'image_normal' => 'image',
             'image_transparent' => 'image',
             'active' => 'boolean',

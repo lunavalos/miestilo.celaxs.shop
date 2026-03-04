@@ -13,7 +13,7 @@ const MEXICAN_STATES = [
 ];
 
 export default function CheckoutForm({ selectedBrand, selectedModel, layers, updateLayer, selectedLayerId, setSelectedLayerId, deleteLayer, getImageUrl }) {
-    const PRICE = 350.00;
+    const PRICE = parseFloat(selectedModel?.price || 350);
     const SHIPPING = 100.00;
     const TOTAL = PRICE + SHIPPING;
 

@@ -14,7 +14,7 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
 
     // ---- Modelos ----
     const [showModelModal, setShowModelModal] = useState(false);
-    const [modelForm, setModelForm] = useState({ brand_id: '', name: '', image_normal: null, image_transparent: null });
+    const [modelForm, setModelForm] = useState({ brand_id: '', name: '', price: '350.00', image_normal: null, image_transparent: null });
     const [modelLoading, setModelLoading] = useState(false);
     const [modelError, setModelError] = useState('');
     const [modelFilterBrandId, setModelFilterBrandId] = useState('');
@@ -53,12 +53,13 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
         const fd = new FormData();
         fd.append('brand_id', modelForm.brand_id);
         fd.append('name', modelForm.name);
+        fd.append('price', modelForm.price);
         if (modelForm.image_normal) fd.append('image_normal', modelForm.image_normal);
         if (modelForm.image_transparent) fd.append('image_transparent', modelForm.image_transparent);
         fd.append('active', '1');
         try {
             await axios.post('/api/models', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-            setShowModelModal(false); setModelForm({ brand_id: '', name: '', image_normal: null, image_transparent: null }); router.reload();
+            setShowModelModal(false); setModelForm({ brand_id: '', name: '', price: '350.00', image_normal: null, image_transparent: null }); router.reload();
         } catch (err) { setModelError(err.response?.data?.message || 'Error al guardar'); }
         finally { setModelLoading(false); }
     };
@@ -234,7 +235,7 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
                                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                             <thead>
                                                 <tr style={{ background: '#f9fafb' }}>
-                                                    {['Imagen', 'Nombre', 'Marca', 'Estado', 'Acciones'].map(h => (
+                                                    {['Imagen', 'Nombre', 'Marca', 'Precio', 'Estado', 'Acciones'].map(h => (
                                                         <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.8rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase' }}>{h}</th>
                                                     ))}
                                                 </tr>
@@ -247,6 +248,7 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
                                                         </td>
                                                         <td style={{ padding: '0.75rem 1rem', fontWeight: '600', fontSize: '0.9rem' }}>{model.name}</td>
                                                         <td style={{ padding: '0.75rem 1rem', color: '#6b7280', fontSize: '0.9rem' }}>{model.brand?.name || '—'}</td>
+                                                        <td style={{ padding: '0.75rem 1rem', fontWeight: '700', color: '#01A0AD', fontSize: '0.9rem' }}>${model.price}</td>
                                                         <td style={{ padding: '0.75rem 1rem' }}>
                                                             <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem', borderRadius: '20px', background: model.active ? '#d1fae5' : '#fee2e2', color: model.active ? '#065f46' : '#991b1b' }}>
                                                                 {model.active ? 'Activo' : 'Inactivo'}
@@ -281,7 +283,7 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
                                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                         <thead>
                                             <tr style={{ background: '#f9fafb' }}>
-                                                {['#', 'Diseño', 'Cliente', 'Modelo', 'Estado', 'Fecha'].map(h => (
+                                                {['#', 'Diseño', 'Cliente', 'Modelo', 'Total', 'Estado', 'Fecha'].map(h => (
                                                     <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.8rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase' }}>{h}</th>
                                                 ))}
                                             </tr>
@@ -308,6 +310,7 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
                                                     </td>
                                                     <td style={{ padding: '0.75rem 1rem', fontWeight: '600', fontSize: '0.9rem' }}>{order.customer_email || '—'}</td>
                                                     <td style={{ padding: '0.75rem 1rem', color: '#6b7280', fontSize: '0.9rem' }}>{order.phone_model?.name || '—'}</td>
+                                                    <td style={{ padding: '0.75rem 1rem', fontWeight: '700', color: '#10b981', fontSize: '0.9rem' }}>${order.total_price}</td>
                                                     <td style={{ padding: '0.75rem 1rem' }}>
                                                         <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem', borderRadius: '20px', background: '#dbeafe', color: '#1e40af' }}>
                                                             {order.status || 'Pendiente'}
@@ -434,6 +437,10 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
                             <div style={{ marginBottom: '1rem' }}>
                                 <label style={labelStyle}>Nombre del Modelo *</label>
                                 <input type="text" style={inputStyle} placeholder="Ej: Galaxy S24..." value={modelForm.name} onChange={e => setModelForm({ ...modelForm, name: e.target.value })} required />
+                            </div>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={labelStyle}>Precio ($ MXN) *</label>
+                                <input type="number" step="0.01" style={inputStyle} placeholder="Ej: 350.00" value={modelForm.price} onChange={e => setModelForm({ ...modelForm, price: e.target.value })} required />
                             </div>
                             <div style={{ marginBottom: '1rem' }}>
                                 <label style={labelStyle}>Imagen Normal (con fondo) *</label>

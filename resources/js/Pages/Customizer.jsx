@@ -231,14 +231,23 @@ export default function Customizer({ auth }) {
                                     <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', fontSize: '0.85rem' }}>Fuente</label>
                                     <select
                                         className="form-input"
-                                        style={{ width: '100%' }}
+                                        style={{ width: '100%', fontFamily: selectedLayer.fontFamily || 'Arial' }}
                                         value={selectedLayer.fontFamily}
                                         onChange={(e) => updateSelectedLayer({ fontFamily: e.target.value })}
                                     >
-                                        <option value="Montserrat">Montserrat</option>
-                                        <option value="Quicksand">Quicksand</option>
-                                        <option value="Arial">Arial</option>
-                                        <option value="Times New Roman">Times New Roman</option>
+                                        <option value="Montserrat" style={{ fontFamily: 'Montserrat' }}>Montserrat</option>
+                                        <option value="Arial" style={{ fontFamily: 'Arial' }}>Arial</option>
+                                        <option value="Times New Roman" style={{ fontFamily: 'Times New Roman' }}>Times New Roman</option>
+                                        <option value="Bebas Neue" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>Bebas Neue</option>
+                                        <option value="Oswald" style={{ fontFamily: "'Oswald', sans-serif" }}>Oswald</option>
+                                        <option value="Anton" style={{ fontFamily: "'Anton', sans-serif" }}>Anton</option>
+                                        <option value="Lobster" style={{ fontFamily: "'Lobster', cursive" }}>Lobster</option>
+                                        <option value="Pacifico" style={{ fontFamily: "'Pacifico', cursive" }}>Pacifico</option>
+                                        <option value="Dancing Script" style={{ fontFamily: "'Dancing Script', cursive" }}>Dancing Script</option>
+                                        <option value="Caveat" style={{ fontFamily: "'Caveat', cursive" }}>Caveat</option>
+                                        <option value="Righteous" style={{ fontFamily: "'Righteous', cursive" }}>Righteous</option>
+                                        <option value="Permanent Marker" style={{ fontFamily: "'Permanent Marker', cursive" }}>Permanent Marker</option>
+                                        <option value="Playfair Display" style={{ fontFamily: "'Playfair Display', serif" }}>Playfair</option>
                                     </select>
                                 </div>
                                 <div style={{ marginBottom: '1rem' }}>
@@ -417,7 +426,8 @@ export default function Customizer({ auth }) {
                                                 onClick={() => { setSelectedModel(model); setLayers([]); }}
                                             >
                                                 <img src={getImageUrl(model.image_normal)} alt={model.name} />
-                                                <h3 style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>{model.name}</h3>
+                                                <h3 style={{ fontSize: '0.9rem', marginTop: '0.5rem', marginBottom: '0.2rem' }}>{model.name}</h3>
+                                                <p style={{ fontSize: '0.85rem', fontWeight: '800', color: '#01A0AD', margin: 0 }}>${model.price} MXN</p>
                                             </div>
                                         ))}
                                     </div>
