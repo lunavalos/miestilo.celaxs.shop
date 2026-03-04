@@ -11,12 +11,14 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
     const [brandForm, setBrandForm] = useState({ name: '', logo: null });
     const [brandLoading, setBrandLoading] = useState(false);
     const [brandError, setBrandError] = useState('');
+    const [editingBrandId, setEditingBrandId] = useState(null);
 
     // ---- Modelos ----
     const [showModelModal, setShowModelModal] = useState(false);
     const [modelForm, setModelForm] = useState({ brand_id: '', name: '', price: '350.00', image_normal: null, image_transparent: null });
     const [modelLoading, setModelLoading] = useState(false);
     const [modelError, setModelError] = useState('');
+    const [editingModelId, setEditingModelId] = useState(null);
     const [modelFilterBrandId, setModelFilterBrandId] = useState('');
 
     // ---- Usuarios ----
@@ -33,9 +35,15 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
         fd.append('name', brandForm.name);
         if (brandForm.logo) fd.append('logo', brandForm.logo);
         fd.append('active', '1');
+        // If editing, spoof PUT method
+        if (editingBrandId) fd.append('_method', 'PUT');
         try {
-            await axios.post('/api/brands', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-            setShowBrandModal(false); setBrandForm({ name: '', logo: null }); router.reload();
+            const url = editingBrandId ? `/api/brands/${editingBrandId}` : '/api/brands';
+            await axios.post(url, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+            setShowBrandModal(false);
+            setBrandForm({ name: '', logo: null });
+            setEditingBrandId(null);
+            router.reload();
         } catch (err) { setBrandError(err.response?.data?.message || 'Error al guardar'); }
         finally { setBrandLoading(false); }
     };
@@ -57,11 +65,36 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
         if (modelForm.image_normal) fd.append('image_normal', modelForm.image_normal);
         if (modelForm.image_transparent) fd.append('image_transparent', modelForm.image_transparent);
         fd.append('active', '1');
+
+        if (editingModelId) fd.append('_method', 'PUT');
+
         try {
-            await axios.post('/api/models', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-            setShowModelModal(false); setModelForm({ brand_id: '', name: '', price: '350.00', image_normal: null, image_transparent: null }); router.reload();
+            const url = editingModelId ? `/api/models/${editingModelId}` : '/api/models';
+            await axios.post(url, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+            setShowModelModal(false);
+            setModelForm({ brand_id: '', name: '', price: '350.00', image_normal: null, image_transparent: null });
+            setEditingModelId(null);
+            router.reload();
         } catch (err) { setModelError(err.response?.data?.message || 'Error al guardar'); }
         finally { setModelLoading(false); }
+    };
+
+    const handleEditBrand = (brand) => {
+        setBrandForm({ name: brand.name, logo: null });
+        setEditingBrandId(brand.id);
+        setShowBrandModal(true);
+    };
+
+    const handleEditModel = (model) => {
+        setModelForm({
+            brand_id: model.brand_id,
+            name: model.name,
+            price: model.price,
+            image_normal: null,
+            image_transparent: null
+        });
+        setEditingModelId(model.id);
+        setShowModelModal(true);
     };
 
     const handleDeleteModel = async (id) => {
@@ -103,6 +136,21 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
         if (!confirm('¿Eliminar este usuario?')) return;
         try { await axios.delete(`/api/admin/users/${id}`); router.reload(); }
         catch { alert('Error al eliminar'); }
+    };
+
+    // Helper to reset and close modals
+    const closeBrandModal = () => {
+        setShowBrandModal(false);
+        setEditingBrandId(null);
+        setBrandForm({ name: '', logo: null });
+        setBrandError('');
+    };
+
+    const closeModelModal = () => {
+        setShowModelModal(false);
+        setEditingModelId(null);
+        setModelForm({ brand_id: '', name: '', price: '350.00', image_normal: null, image_transparent: null });
+        setModelError('');
     };
 
     // ---- Estilos comunes ----
@@ -182,9 +230,12 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
                                             <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem', borderRadius: '20px', background: brand.active ? '#d1fae5' : '#fee2e2', color: brand.active ? '#065f46' : '#991b1b' }}>
                                                 {brand.active ? 'Activa' : 'Inactiva'}
                                             </span>
-                                            <div style={{ marginTop: '0.75rem' }}>
+                                            <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                                                <button style={{ ...btnPrimary, padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={() => handleEditBrand(brand)}>
+                                                    <i className="fas fa-edit"></i> Editar
+                                                </button>
                                                 <button style={btnDanger} onClick={() => handleDeleteBrand(brand.id)}>
-                                                    <i className="fas fa-trash"></i> Eliminar
+                                                    <i className="fas fa-trash"></i>
                                                 </button>
                                             </div>
                                         </div>
@@ -254,9 +305,12 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
                                                                 {model.active ? 'Activo' : 'Inactivo'}
                                                             </span>
                                                         </td>
-                                                        <td style={{ padding: '0.75rem 1rem' }}>
+                                                        <td style={{ padding: '0.75rem 1rem', display: 'flex', gap: '0.5rem' }}>
+                                                            <button style={{ ...btnPrimary, padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={() => handleEditModel(model)}>
+                                                                <i className="fas fa-edit"></i> Editar
+                                                            </button>
                                                             <button style={btnDanger} onClick={() => handleDeleteModel(model.id)}>
-                                                                <i className="fas fa-trash"></i> Eliminar
+                                                                <i className="fas fa-trash"></i>
                                                             </button>
                                                         </td>
                                                     </tr>
@@ -393,8 +447,8 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
                     <div style={{ background: 'white', borderRadius: '16px', padding: '2rem', width: '100%', maxWidth: '450px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800' }}>Nueva Marca</h3>
-                            <button onClick={() => setShowBrandModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280' }}>×</button>
+                            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800' }}>{editingBrandId ? 'Editar Marca' : 'Nueva Marca'}</h3>
+                            <button onClick={closeBrandModal} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280' }}>×</button>
                         </div>
                         {brandError && <div style={{ background: '#fee2e2', color: '#991b1b', padding: '0.75rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem' }}>{brandError}</div>}
                         <form onSubmit={handleBrandSubmit}>
@@ -404,10 +458,10 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
                             </div>
                             <div style={{ marginBottom: '1.5rem' }}>
                                 <label style={labelStyle}>Logo de la Marca</label>
-                                <input type="file" accept="image/*" style={{ ...inputStyle, padding: '0.4rem' }} onChange={e => setBrandForm({ ...brandForm, logo: e.target.files[0] })} />
+                                <input type="file" accept="image/*" style={{ ...inputStyle, padding: '0.4rem' }} onChange={e => setBrandForm({ ...brandForm, logo: e.target.files[0] })} required={!editingBrandId} />
                             </div>
                             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-                                <button type="button" onClick={() => setShowBrandModal(false)} style={{ padding: '0.6rem 1.2rem', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>Cancelar</button>
+                                <button type="button" onClick={closeBrandModal} style={{ padding: '0.6rem 1.2rem', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>Cancelar</button>
                                 <button type="submit" style={btnPrimary} disabled={brandLoading}>
                                     {brandLoading ? <><i className="fas fa-spinner fa-spin"></i> Guardando...</> : <><i className="fas fa-save"></i> Guardar</>}
                                 </button>
@@ -422,8 +476,8 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
                     <div style={{ background: 'white', borderRadius: '16px', padding: '2rem', width: '100%', maxWidth: '500px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', maxHeight: '90vh', overflowY: 'auto' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800' }}>Nuevo Modelo</h3>
-                            <button onClick={() => setShowModelModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280' }}>×</button>
+                            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800' }}>{editingModelId ? 'Editar Modelo' : 'Nuevo Modelo'}</h3>
+                            <button onClick={closeModelModal} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280' }}>×</button>
                         </div>
                         {modelError && <div style={{ background: '#fee2e2', color: '#991b1b', padding: '0.75rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem' }}>{modelError}</div>}
                         <form onSubmit={handleModelSubmit}>
@@ -443,15 +497,15 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
                                 <input type="number" step="0.01" style={inputStyle} placeholder="Ej: 350.00" value={modelForm.price} onChange={e => setModelForm({ ...modelForm, price: e.target.value })} required />
                             </div>
                             <div style={{ marginBottom: '1rem' }}>
-                                <label style={labelStyle}>Imagen Normal (con fondo) *</label>
-                                <input type="file" accept="image/*" style={{ ...inputStyle, padding: '0.4rem' }} onChange={e => setModelForm({ ...modelForm, image_normal: e.target.files[0] })} required />
+                                <label style={labelStyle}>Imagen Normal (con fondo) {editingModelId ? '' : '*'}</label>
+                                <input type="file" accept="image/*" style={{ ...inputStyle, padding: '0.4rem' }} onChange={e => setModelForm({ ...modelForm, image_normal: e.target.files[0] })} required={!editingModelId} />
                             </div>
                             <div style={{ marginBottom: '1.5rem' }}>
-                                <label style={labelStyle}>Imagen Transparente (máscara) *</label>
-                                <input type="file" accept="image/png" style={{ ...inputStyle, padding: '0.4rem' }} onChange={e => setModelForm({ ...modelForm, image_transparent: e.target.files[0] })} required />
+                                <label style={labelStyle}>Imagen Transparente (máscara) {editingModelId ? '' : '*'}</label>
+                                <input type="file" accept="image/png" style={{ ...inputStyle, padding: '0.4rem' }} onChange={e => setModelForm({ ...modelForm, image_transparent: e.target.files[0] })} required={!editingModelId} />
                             </div>
                             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-                                <button type="button" onClick={() => setShowModelModal(false)} style={{ padding: '0.6rem 1.2rem', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>Cancelar</button>
+                                <button type="button" onClick={closeModelModal} style={{ padding: '0.6rem 1.2rem', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>Cancelar</button>
                                 <button type="submit" style={btnPrimary} disabled={modelLoading}>
                                     {modelLoading ? <><i className="fas fa-spinner fa-spin"></i> Guardando...</> : <><i className="fas fa-save"></i> Guardar</>}
                                 </button>
