@@ -117,6 +117,19 @@ export default function StripeSettings() {
         <AdminLayout activeTab="stripe_settings">
             <Head title="Stripe / Pagos - Admin" />
 
+            <style>{`
+                .stripe-settings-grid {
+                    display: grid;
+                    grid-template-columns: 1fr 340px;
+                    gap: 2rem;
+                }
+                @media (max-width: 1024px) {
+                    .stripe-settings-grid {
+                        grid-template-columns: 1fr;
+                        gap: 1.5rem;
+                    }
+                }
+            `}</style>
             <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -143,7 +156,7 @@ export default function StripeSettings() {
                     </div>
                 )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '2rem' }}>
+                <div className="stripe-settings-grid">
 
                     <div>
                         <div style={{ background: 'white', borderRadius: '12px', padding: '2rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
