@@ -27,16 +27,15 @@ export default function StripeSettings() {
     const [showKeys, setShowKeys] = useState(false);
 
     useEffect(() => {
-        fetchData();
-    }, []);
+        fetchData(currentEnv);
+    }, [currentEnv]);
 
-    const fetchData = async () => {
+    const fetchData = async (env) => {
         setLoading(true);
         try {
-            const res = await axios.get('/api/admin/stripe-settings');
+            const res = await axios.get(`/api/admin/stripe-settings?env=${env}`);
             const data = res.data;
 
-            setCurrentEnv(data.environment || 'sandbox');
             setFormData({
                 public_key: data.public_key || '',
                 secret_key: data.secret_key || '',
@@ -47,7 +46,8 @@ export default function StripeSettings() {
                 is_configured: data.is_configured,
                 validation_errors: data.validation_errors || [],
                 last_verified_at: data.last_verified_at,
-                last_error: data.last_error
+                last_error: data.last_error,
+                global_active_env: data.global_active_env
             });
             setLogs(data.logs || []);
         } catch (err) {
@@ -65,16 +65,38 @@ export default function StripeSettings() {
         try {
             const res = await axios.put('/api/admin/stripe-settings', {
                 ...formData,
+                is_active: true, // Force active on "Save and Activate" button
                 environment: currentEnv
             });
             setMessage({ type: 'success', text: res.data.message });
-            fetchData();
+            fetchData(currentEnv);
         } catch (err) {
             const errorData = err.response?.data;
             setMessage({ type: 'error', text: errorData?.message || 'Error al guardar.' });
             if (errorData?.validation_errors) {
                 setConfigStatus(prev => ({ ...prev, validation_errors: Object.values(errorData.validation_errors) }));
             }
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleToggleActive = async () => {
+        setSaving(true);
+        try {
+            const newVal = !formData.is_active;
+            const res = await axios.put('/api/admin/stripe-settings', {
+                ...formData,
+                is_active: newVal,
+                environment: currentEnv,
+                public_key: '********', // Use masked to avoid overwriting with empty if not loaded
+                secret_key: '********'
+            });
+            setFormData(prev => ({ ...prev, is_active: newVal }));
+            setMessage({ type: 'success', text: newVal ? 'Canal activado.' : 'Canal desactivado.' });
+            fetchData(currentEnv);
+        } catch (err) {
+            setMessage({ type: 'error', text: 'Error al cambiar estado.' });
         } finally {
             setSaving(false);
         }
@@ -137,13 +159,13 @@ export default function StripeSettings() {
                         <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>Stripe / Pagos</h2>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <span style={{ padding: '0.4rem 0.8rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '700', background: currentEnv === 'production' ? '#fee2e2' : '#dcfce7', color: currentEnv === 'production' ? '#991b1b' : '#166534', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <i className={`fas ${currentEnv === 'production' ? 'fa-rocket' : 'fa-flask'}`}></i>
-                            MODO: {currentEnv.toUpperCase()}
+                        <span style={{ padding: '0.4rem 0.8rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '700', background: configStatus.global_active_env === 'production' ? '#fee2e2' : configStatus.global_active_env === 'sandbox' ? '#dcfce7' : '#f1f5f9', color: configStatus.global_active_env === 'production' ? '#991b1b' : configStatus.global_active_env === 'sandbox' ? '#166534' : '#64748b', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <i className={`fas ${configStatus.global_active_env === 'production' ? 'fa-rocket' : 'fa-flask'}`}></i>
+                            ACTIVO: {configStatus.global_active_env ? configStatus.global_active_env.toUpperCase() : 'NINGUNO'}
                         </span>
                         {!configStatus.is_configured && (
                             <span style={{ padding: '0.4rem 0.8rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '700', background: '#fef3c7', color: '#92400e' }}>
-                                INCOMPLETA / DESACTIVADO
+                                {currentEnv === 'sandbox' ? 'SANDBOX NO VERIFICADO' : 'LIVE NO VERIFICADO'}
                             </span>
                         )}
                     </div>
@@ -269,17 +291,44 @@ export default function StripeSettings() {
                         </div> */}
 
                         <div style={{ background: 'white', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-                            <h3 style={{ margin: '0 0 1rem', fontSize: '0.85rem', fontWeight: '800', color: '#1f2937' }}>Estado del Canal</h3>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <h3 style={{ margin: '0 0 1rem', fontSize: '0.85rem', fontWeight: '800', color: '#1f2937' }}>Estado del Canal</h3>
+                                <div 
+                                    onClick={handleToggleActive}
+                                    style={{ 
+                                        width: '40px', 
+                                        height: '20px', 
+                                        background: formData.is_active ? '#10b981' : '#d1d5db', 
+                                        borderRadius: '10px', 
+                                        position: 'relative', 
+                                        cursor: 'pointer',
+                                        transition: 'background 0.2s'
+                                    }}
+                                >
+                                    <div style={{ 
+                                        width: '16px', 
+                                        height: '16px', 
+                                        background: 'white', 
+                                        borderRadius: '50%', 
+                                        position: 'absolute', 
+                                        top: '2px', 
+                                        left: formData.is_active ? '22px' : '2px',
+                                        transition: 'left 0.2s'
+                                    }}></div>
+                                </div>
+                            </div>
 
-                            {configStatus.is_configured && formData.is_active ? (
-                                <div style={{ padding: '0.75rem', borderRadius: '8px', background: '#dcfce7', color: '#166534', fontSize: '0.8rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <i className="fas fa-check-circle"></i> CANAL ACTIVO
-                                </div>
-                            ) : (
-                                <div style={{ padding: '0.75rem', borderRadius: '8px', background: '#f1f5f9', color: '#64748b', fontSize: '0.8rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <i className="fas fa-pause-circle"></i> DESACTIVADO
-                                </div>
-                            )}
+                            <div style={{ marginTop: '0.8rem' }}>
+                                {configStatus.is_configured && formData.is_active ? (
+                                    <div style={{ padding: '0.75rem', borderRadius: '8px', background: '#dcfce7', color: '#166534', fontSize: '0.8rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <i className="fas fa-check-circle"></i> CANAL ACTIVO
+                                    </div>
+                                ) : (
+                                    <div style={{ padding: '0.75rem', borderRadius: '8px', background: '#f1f5f9', color: '#64748b', fontSize: '0.8rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <i className="fas fa-pause-circle"></i> DESACTIVADO
+                                    </div>
+                                )}
+                            </div>
 
                             <div style={{ marginTop: '1.5rem' }}>
                                 <label style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '0.8rem' }}>ESTADO DE VERIFICACIÓN:</label>

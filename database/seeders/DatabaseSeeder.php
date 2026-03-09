@@ -158,5 +158,9 @@ class DatabaseSeeder extends Seeder
                 'active' => true,
             ]);
         }
+
+        $this->call([
+            ShippingZoneSeeder::class,
+        ]);
     }
 }

@@ -14,8 +14,10 @@ const MEXICAN_STATES = [
 
 export default function CheckoutForm({ selectedBrand, selectedModel, layers, updateLayer, selectedLayerId, setSelectedLayerId, deleteLayer, getImageUrl }) {
     const PRICE = parseFloat(selectedModel?.price || 350);
-    const SHIPPING = 100.00;
-    const TOTAL = PRICE + SHIPPING;
+
+    const [zones, setZones] = useState([]);
+    const [shippingPrice, setShippingPrice] = useState(100.00);
+    const TOTAL = PRICE + shippingPrice;
 
     const [form, setForm] = useState({
         first_name: '', last_name: '', country: 'México',
@@ -42,10 +44,15 @@ export default function CheckoutForm({ selectedBrand, selectedModel, layers, upd
 
     // Initial config for Stripe
     React.useEffect(() => {
-        const initStripe = async () => {
+        const initCheckout = async () => {
             try {
+                // Load Stripe Config
                 const res = await axios.get('/api/payments/config');
                 setPaymentConfig(res.data);
+
+                // Load Shipping Zones
+                const zonesRes = await axios.get('/api/shipping-zones');
+                setZones(zonesRes.data);
 
                 if (res.data.is_active && res.data.publishable_key) {
                     await loadScript('https://js.stripe.com/v3/');
@@ -81,11 +88,34 @@ export default function CheckoutForm({ selectedBrand, selectedModel, layers, upd
                     return () => clearInterval(mountInterval);
                 }
             } catch (err) {
-                console.error("Error loading Stripe config:", err);
+                console.error("Error loading checkout data:", err);
             }
         };
-        initStripe();
+        initCheckout();
     }, []);
+
+    // Update shipping price when location changes
+    React.useEffect(() => {
+        const calculateShipping = async () => {
+            const state = form.ship_to_different_address ? form.shipping_state : form.state;
+            const city = form.ship_to_different_address ? form.shipping_city : form.city;
+            const zipCode = form.ship_to_different_address ? form.shipping_zip_code : form.zip_code;
+
+            if (!state) return;
+
+            try {
+                const res = await axios.post('/api/shipping/calculate', { state, city, zip_code: zipCode });
+                if (res.data.price !== undefined) {
+                    setShippingPrice(parseFloat(res.data.price));
+                }
+            } catch (err) {
+                console.error("Error calculating shipping:", err);
+            }
+        };
+
+        const timer = setTimeout(calculateShipping, 500); // Debounce
+        return () => clearTimeout(timer);
+    }, [form.state, form.city, form.zip_code, form.shipping_state, form.shipping_city, form.shipping_zip_code, form.ship_to_different_address]);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -122,7 +152,7 @@ export default function CheckoutForm({ selectedBrand, selectedModel, layers, upd
                 customization_data: { layers },
                 preview_image: preview_image,
                 total_price: TOTAL,
-                shipping_price: SHIPPING,
+                shipping_price: shippingPrice,
                 first_name: form.first_name,
                 last_name: form.last_name,
                 country: form.country,
@@ -292,11 +322,11 @@ export default function CheckoutForm({ selectedBrand, selectedModel, layers, upd
                             <div style={{ marginBottom: '0.85rem' }}>
                                 <label className="checkout-label">Dirección de la calle <span className="req">*</span></label>
                                 <input className="checkout-input" type="text" name="address_line1" placeholder="Nombre de la calle y número de la casa" value={form.address_line1} onChange={handleChange} required style={{ marginBottom: '0.5rem' }} />
-                                <input className="checkout-input" type="text" name="address_line2" placeholder="Apartamento, habitación, etc. (opcional)" value={form.address_line2} onChange={handleChange} />
+                                <input className="checkout-input" type="text" name="address_line2" placeholder="Especificaciones del domicilio (ej: Frente a plaza, portón negro, casa de dos pisos)" value={form.address_line2} onChange={handleChange} />
                             </div>
 
                             <div style={{ marginBottom: '0.85rem' }}>
-                                <label className="checkout-label">Población <span className="req">*</span></label>
+                                <label className="checkout-label">Ciudad <span className="req">*</span></label>
                                 <input className="checkout-input" type="text" name="city" value={form.city} onChange={handleChange} required />
                             </div>
 
@@ -362,11 +392,11 @@ export default function CheckoutForm({ selectedBrand, selectedModel, layers, upd
                                 <div style={{ marginBottom: '0.85rem' }}>
                                     <label className="checkout-label">Dirección de la calle <span className="req">*</span></label>
                                     <input className="checkout-input" type="text" name="shipping_address_line1" placeholder="Nombre de la calle y número de la casa" value={form.shipping_address_line1} onChange={handleChange} required={form.ship_to_different_address} style={{ marginBottom: '0.5rem' }} />
-                                    <input className="checkout-input" type="text" name="shipping_address_line2" placeholder="Apartamento, habitación, etc. (opcional)" value={form.shipping_address_line2} onChange={handleChange} />
+                                    <input className="checkout-input" type="text" name="shipping_address_line2" placeholder="Especificaciones del domicilio (ej: Frente a plaza, portón negro, casa de dos pisos)" value={form.shipping_address_line2} onChange={handleChange} />
                                 </div>
 
                                 <div style={{ marginBottom: '0.85rem' }}>
-                                    <label className="checkout-label">Población <span className="req">*</span></label>
+                                    <label className="checkout-label">Ciudad <span className="req">*</span></label>
                                     <input className="checkout-input" type="text" name="shipping_city" value={form.shipping_city} onChange={handleChange} required={form.ship_to_different_address} />
                                 </div>
 
@@ -425,9 +455,9 @@ export default function CheckoutForm({ selectedBrand, selectedModel, layers, upd
                                 <span className="order-row-value">${PRICE.toFixed(2)}</span>
                             </div>
                             <div className="order-row">
-                                <span className="order-row-label">Envío 1</span>
+                                <span className="order-row-label">Envío</span>
                                 <span style={{ fontSize: '0.85rem', color: '#374151', textAlign: 'right' }}>
-                                    Precio fijo Nacional:<br /><strong>${SHIPPING.toFixed(2)}</strong>
+                                    {form.ship_to_different_address ? form.shipping_state : form.state}:<br /><strong>${shippingPrice.toFixed(2)}</strong>
                                 </span>
                             </div>
                             <hr className="order-divider" />

@@ -14,27 +14,34 @@ class StripeSettingController extends Controller
     /**
      * Get Stripe settings and logs.
      */
-    public function index()
+    public function index(Request $request)
     {
         try {
-            $settings = PaymentSetting::where('provider', 'stripe')->where('is_active', true)->first();
+            $env = $request->query('env', 'sandbox');
+            
+            // Get settings for the requested environment
+            $settings = PaymentSetting::where('provider', 'stripe')->where('environment', $env)->first();
+            
+            // Also check if ANY environment is active for this provider
+            $activeSetting = PaymentSetting::where('provider', 'stripe')->where('is_active', true)->first();
+            
             $logs = PaymentWebhookLog::where('provider', 'stripe')->latest()->take(20)->get();
 
             if (!$settings) {
                 return response()->json([
                     'provider' => 'stripe',
-                    'environment' => 'sandbox',
+                    'environment' => $env,
                     'public_key' => '',
                     'secret_key' => '',
                     'webhook_secret' => '',
                     'is_active' => false,
                     'is_configured' => false,
                     'validation_errors' => [],
-                    'logs' => $logs
+                    'logs' => $logs,
+                    'global_active_env' => $activeSetting?->environment
                 ]);
             }
 
-            $env = $settings->environment;
             $s = $settings->settings ?? [];
 
             // Validation logic for is_configured
@@ -73,7 +80,8 @@ class StripeSettingController extends Controller
                 'last_verified_at' => $settings->last_verified_at,
                 'last_error' => $settings->last_error,
                 'validation_errors' => $errors ?? [],
-                'logs' => $logs ?? []
+                'logs' => $logs ?? [],
+                'global_active_env' => $activeSetting?->environment
             ]);
         } catch (\Exception $e) {
             Log::error('Error loading Stripe settings: ' . $e->getMessage());

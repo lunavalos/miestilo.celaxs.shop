@@ -68,7 +68,7 @@ class OrderController extends Controller
         ]);
 
         // Create preorder in PENDING_PAYMENT status
-        $validated['status'] = 'pending';
+        $validated['status'] = 'pendiente';
         $validated['payment_status'] = 'pending_payment';
         $validated['shipping_price'] = $validated['shipping_price'] ?? 100.00;
 
@@ -161,7 +161,7 @@ class OrderController extends Controller
             if ($stripeData['status'] === 'succeeded') {
                 $order->update([
                     'payment_status' => 'paid',
-                    'status' => 'processing',
+                    'status' => 'en proceso',
                     'transaction_id' => $stripeData['id']
                 ]);
                 Log::info("Order {$order->id} confirmed as PAID via Stripe Intent {$stripeData['id']}");
@@ -197,6 +197,19 @@ class OrderController extends Controller
             'environment' => $config->environment,
             'publishable_key' => $config->settings['public_key'] ?? '',
             'message' => 'OK'
+        ]);
+    }
+    public function updateStatus(Request $request, Order $order)
+    {
+        $validated = $request->validate([
+            'status' => 'required|in:pendiente,en proceso,enviado,entregado'
+        ]);
+
+        $order->update(['status' => $validated['status']]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Estado del pedido actualizado correctamente.'
         ]);
     }
 }

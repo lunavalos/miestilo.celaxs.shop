@@ -11,6 +11,7 @@ export default function AdminLayout({ children, activeTab, onTabChange }) {
         { id: 'models', icon: 'fa-mobile-alt', label: 'Modelos' },
         { id: 'orders', icon: 'fa-shopping-bag', label: 'Pedidos' },
         { id: 'users', icon: 'fa-users', label: 'Usuarios' },
+        { id: 'shipping_settings', icon: 'fa-truck', label: 'Configuración / Envío', href: route('admin.shipping.settings') },
         { id: 'stripe_settings', icon: 'fab fa-stripe', label: 'Stripe / Pagos', href: route('admin.stripe.settings') },
     ];
 

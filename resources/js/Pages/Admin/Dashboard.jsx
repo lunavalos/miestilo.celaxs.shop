@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, Link } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import axios from 'axios';
+import { 
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+    PieChart, Pie, Cell, Legend, LineChart, Line
+} from 'recharts';
 
-export default function Dashboard({ auth, brands = [], models = [], orders = [], users = [] }) {
-    const [activeTab, setActiveTab] = useState('brands');
+export default function Dashboard({ auth, brands = [], models = [], orders = [], users = [], dashboard_stats = {} }) {
+    const [activeTab, setActiveTab] = useState('orders');
 
     // ---- Marcas ----
     const [showBrandModal, setShowBrandModal] = useState(false);
@@ -20,6 +24,8 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
     const [modelError, setModelError] = useState('');
     const [editingModelId, setEditingModelId] = useState(null);
     const [modelFilterBrandId, setModelFilterBrandId] = useState('');
+
+
 
     // ---- Usuarios ----
     const [showUserModal, setShowUserModal] = useState(false);
@@ -138,6 +144,8 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
         catch { alert('Error al eliminar'); }
     };
 
+
+
     // Helper to reset and close modals
     const closeBrandModal = () => {
         setShowBrandModal(false);
@@ -184,23 +192,108 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
                 @media (max-width: 480px) {
                     .admin-stats-grid { grid-template-columns: 1fr; gap: 1rem; }
                 }
+                .status-container { position: relative; display: inline-block; }
+                .status-tooltip {
+                    visibility: hidden;
+                    width: 180px;
+                    background-color: #334155;
+                    color: #fff;
+                    text-align: center;
+                    border-radius: 6px;
+                    padding: 8px;
+                    position: absolute;
+                    z-index: 100;
+                    bottom: 125%;
+                    left: 50%;
+                    margin-left: -90px;
+                    opacity: 0;
+                    transition: opacity 0.3s;
+                    font-size: 0.75rem;
+                    pointer-events: none;
+                    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+                    line-height: 1.2;
+                }
+                .status-container:hover .status-tooltip {
+                    visibility: visible;
+                    opacity: 1;
+                }
+                .status-tooltip::after {
+                    content: "";
+                    position: absolute;
+                    top: 100%;
+                    left: 50%;
+                    margin-left: -5px;
+                    border-width: 5px;
+                    border-style: solid;
+                    border-color: #334155 transparent transparent transparent;
+                }
             `}</style>
             <div className="admin-stats-grid">
-                {stats.map(stat => (
-                    <div
-                        key={stat.label}
-                        onClick={() => setActiveTab(stat.tab)}
-                        style={{ background: 'white', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer', border: activeTab === stat.tab ? `2px solid ${stat.color}` : '2px solid transparent', transition: 'all 0.2s' }}
-                    >
-                        <div style={{ width: '50px', height: '50px', borderRadius: '12px', background: stat.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <i className={`fas ${stat.icon}`} style={{ color: stat.color, fontSize: '1.3rem' }}></i>
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                            <p style={{ margin: 0, color: '#6b7280', fontSize: '0.85rem' }}>{stat.label}</p>
-                            <p style={{ margin: 0, fontSize: '1.8rem', fontWeight: '800', color: '#111827' }}>{stat.value}</p>
-                        </div>
-                    </div>
-                ))}
+                {/* Ventas Totales - Card simple */}
+                <div style={{ background: 'white', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <p style={{ margin: 0, color: '#6b7280', fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase' }}>Ingresos Totales (Pagados)</p>
+                    <p style={{ margin: '0.5rem 0 0', fontSize: '2.2rem', fontWeight: '900', color: '#10b981' }}>
+                        ${new Number(dashboard_stats.total_revenue || 0).toLocaleString()}
+                    </p>
+                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: '#6b7280' }}>
+                        {dashboard_stats.orders_count || 0} pedidos confirmados
+                    </p>
+                </div>
+
+                {/* Pedidos por Estado - Pie Chart */}
+                <div style={{ background: 'white', borderRadius: '12px', padding: '1.2rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', height: '240px' }}>
+                    <p style={{ margin: '0 0 1rem', color: '#6b7280', fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase' }}>Pedidos por Estatus</p>
+                    <ResponsiveContainer width="100%" height="85%">
+                        <PieChart>
+                            <Pie
+                                data={dashboard_stats.status_counts || []}
+                                cx="50%" cy="50%"
+                                innerRadius={40}
+                                outerRadius={60}
+                                paddingAngle={5}
+                                dataKey="value"
+                            >
+                                {[
+                                    { name: 'Pendiente', color: '#f59e0b' },
+                                    { name: 'En Proceso', color: '#3b82f6' },
+                                    { name: 'Enviado', color: '#10b981' },
+                                    { name: 'Entregado', color: '#64748b' }
+                                ].map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                ))}
+                            </Pie>
+                            <Tooltip />
+                            <Legend verticalAlign="bottom" height={36} wrapperStyle={{fontSize: '10px'}} />
+                        </PieChart>
+                    </ResponsiveContainer>
+                </div>
+
+                {/* Modelos Top - Bar Chart */}
+                <div style={{ background: 'white', borderRadius: '12px', padding: '1.2rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', height: '240px' }}>
+                    <p style={{ margin: '0 0 1rem', color: '#6b7280', fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase' }}>Modelos más Vendidos</p>
+                    <ResponsiveContainer width="100%" height="85%">
+                        <BarChart data={dashboard_stats.most_sold_models || []} layout="vertical">
+                            <XAxis type="number" hide />
+                            <YAxis dataKey="name" type="category" width={80} style={{ fontSize: '10px' }} />
+                            <Tooltip />
+                            <Bar dataKey="total" fill="#EC008C" radius={[0, 4, 4, 0]} barSize={15} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+
+                {/* Zonas Populares - Bar Chart */}
+                <div style={{ background: 'white', borderRadius: '12px', padding: '1.2rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', height: '240px' }}>
+                    <p style={{ margin: '0 0 1rem', color: '#6b7280', fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase' }}>Zonas Populares (Estados)</p>
+                    <ResponsiveContainer width="100%" height="85%">
+                        <BarChart data={dashboard_stats.top_zones || []}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                            <XAxis dataKey="name" style={{ fontSize: '9px' }} interval={0} />
+                            <YAxis style={{ fontSize: '10px' }} />
+                            <Tooltip />
+                            <Bar dataKey="total" fill="#01A0AD" radius={[4, 4, 0, 0]}  />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
             </div>
 
             {/* Contenido de tabs */}
@@ -337,41 +430,74 @@ export default function Dashboard({ auth, brands = [], models = [], orders = [],
                                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                         <thead>
                                             <tr style={{ background: '#f9fafb' }}>
-                                                {['#', 'Diseño', 'Cliente', 'Modelo', 'Total', 'Estado', 'Fecha'].map(h => (
-                                                    <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.8rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase' }}>{h}</th>
+                                                {['Diseño', 'Marca / Modelo', 'Estado', 'Fecha', 'Información Completa'].map(h => (
+                                                    <th key={h} style={{ padding: '0.75rem 1rem', textAlign: h === 'Información Completa' ? 'center' : 'left', fontSize: '0.8rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase' }}>{h}</th>
                                                 ))}
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {orders.map(order => (
                                                 <tr key={order.id} style={{ borderTop: '1px solid #f3f4f6' }}>
-                                                    <td style={{ padding: '0.75rem 1rem', color: '#6b7280', fontSize: '0.9rem' }}>#{order.id}</td>
                                                     <td style={{ padding: '0.75rem 1rem' }}>
                                                         {order.preview_image ? (
                                                             <div
-                                                                style={{ width: '50px', height: '100px', background: '#f3f4f6', borderRadius: '4px', overflow: 'hidden', cursor: 'pointer', border: '1px solid #e5e7eb' }}
+                                                                style={{ width: '40px', height: '80px', background: '#f3f4f6', borderRadius: '4px', overflow: 'hidden', cursor: 'pointer', border: '1px solid #e5e7eb' }}
                                                                 onClick={() => {
                                                                     const win = window.open('', '_blank');
                                                                     win.document.write(`<img src="${order.preview_image}" style="max-width:100%; height:auto;">`);
                                                                 }}
-                                                                title="Clic para ver diseño completo"
+                                                                title="Ver diseño"
                                                             >
-                                                                <img src={order.preview_image} alt="Diseño" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                                    <img src={order.preview_image} alt="Diseño" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                             </div>
                                                         ) : (
-                                                            <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Sin diseño</span>
+                                                            <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>N/A</span>
                                                         )}
                                                     </td>
-                                                    <td style={{ padding: '0.75rem 1rem', fontWeight: '600', fontSize: '0.9rem' }}>{order.customer_email || '—'}</td>
-                                                    <td style={{ padding: '0.75rem 1rem', color: '#6b7280', fontSize: '0.9rem' }}>{order.phone_model?.name || '—'}</td>
-                                                    <td style={{ padding: '0.75rem 1rem', fontWeight: '700', color: '#10b981', fontSize: '0.9rem' }}>${order.total_price}</td>
+                                                    <td style={{ padding: '0.75rem 1rem', fontSize: '0.85rem' }}>
+                                                        <div style={{ color: '#01A0AD', fontWeight: '600' }}>{order.phone_model?.brand?.name || '—'}</div>
+                                                        <div style={{ fontWeight: '700' }}>{order.phone_model?.name || '—'}</div>
+                                                    </td>
                                                     <td style={{ padding: '0.75rem 1rem' }}>
-                                                        <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem', borderRadius: '20px', background: '#dbeafe', color: '#1e40af' }}>
-                                                            {order.status || 'Pendiente'}
+                                                        <span style={{
+                                                            fontSize: '0.7rem',
+                                                            padding: '0.2rem 0.6rem',
+                                                            borderRadius: '12px',
+                                                            fontWeight: '800',
+                                                            textTransform: 'uppercase',
+                                                            letterSpacing: '0.02em',
+                                                            background: 
+                                                                order.status === 'entregado' ? '#dcfce7' :
+                                                                order.status === 'enviado' ? '#dbeafe' :
+                                                                order.status === 'en proceso' ? '#eff6ff' : '#fef3c7',
+                                                            color: 
+                                                                order.status === 'entregado' ? '#166534' :
+                                                                order.status === 'enviado' ? '#1e40af' :
+                                                                order.status === 'en proceso' ? '#1e40af' : '#92400e',
+                                                        }}>
+                                                            {order.status}
                                                         </span>
                                                     </td>
-                                                    <td style={{ padding: '0.75rem 1rem', color: '#6b7280', fontSize: '0.9rem' }}>
+
+                                                    <td style={{ padding: '0.75rem 1rem', color: '#6b7280', fontSize: '0.8rem' }}>
                                                         {order.created_at ? new Date(order.created_at).toLocaleDateString('es-MX') : '—'}
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
+                                                        <Link
+                                                            href={`/admin/orders/${order.id}`}
+                                                            style={{
+                                                                background: '#01A0AD',
+                                                                color: 'white',
+                                                                padding: '0.4rem 0.8rem',
+                                                                borderRadius: '6px',
+                                                                fontSize: '0.75rem',
+                                                                fontWeight: '700',
+                                                                textDecoration: 'none',
+                                                                display: 'inline-block'
+                                                            }}
+                                                        >
+                                                            Ver más
+                                                        </Link>
                                                     </td>
                                                 </tr>
                                             ))}
