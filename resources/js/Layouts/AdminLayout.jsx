@@ -32,11 +32,14 @@ export default function AdminLayout({ children, activeTab, onTabChange }) {
             {/* ── SIDEBAR (Desktop) ── */}
             <aside className="admin-sidebar">
                 {/* Logo */}
-                <div style={{ padding: '1.5rem', borderBottom: '1px solid #1e293b' }}>
+                <div style={{ padding: '1.5rem', borderBottom: '1px solid #1e293b', textAlign: 'center' }}>
                     <Link href="/" style={{ textDecoration: 'none' }}>
-                        <span style={{ fontSize: '1.5rem', fontWeight: '900', color: '#01A0AD', letterSpacing: '0.05em' }}>CELAX</span>
+                        <img
+                            src="/images/logo-white.png"
+                            alt="CELAX Logo"
+                            style={{ maxWidth: '100%', height: '60px', objectFit: 'contain' }}
+                        />
                     </Link>
-                    <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem', marginBottom: 0 }}>Admin Panel</p>
                 </div>
 
                 {/* Nav */}
@@ -101,7 +104,11 @@ export default function AdminLayout({ children, activeTab, onTabChange }) {
             {/* ── MOBILE TOPBAR ── */}
             <div className="admin-topbar">
                 <Link href="/" style={{ textDecoration: 'none' }}>
-                    <span style={{ fontSize: '1.3rem', fontWeight: '900', color: '#01A0AD' }}>CELAX</span>
+                    <img
+                        src="/images/logo-white.png"
+                        alt="CELAX Logo"
+                        style={{ height: '30px', objectFit: 'contain', filter: 'invert(1) brightness(0)' }}
+                    />
                 </Link>
                 <button
                     className="admin-hamburger"
