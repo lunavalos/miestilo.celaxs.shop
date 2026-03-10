@@ -49,8 +49,8 @@ export default function OrderShow() {
                 {/* Header Section */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
                     <div>
-                        <Link 
-                            href="/admin/dashboard" 
+                        <Link
+                            href="/admin/dashboard"
                             style={{ color: '#01A0AD', textDecoration: 'none', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontWeight: '600' }}
                         >
                             <i className="fas fa-arrow-left"></i> Volver al Panel
@@ -60,7 +60,7 @@ export default function OrderShow() {
                             Realizado el {order.created_at ? new Date(order.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
                         </p>
                     </div>
-                    
+
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                         {statusLoading && <i className="fas fa-spinner fa-spin" style={{ color: '#01A0AD' }}></i>}
                         <div style={{ position: 'relative' }}>
@@ -102,10 +102,10 @@ export default function OrderShow() {
                         </h3>
                         {order.preview_image ? (
                             <div style={{ position: 'relative', display: 'inline-block', padding: '15px', background: '#f8fafc', borderRadius: '20px', border: '1px solid #e2e8f0', width: '100%' }}>
-                                <img 
-                                    src={order.preview_image} 
-                                    alt="Vista previa del diseño" 
-                                    style={{ maxWidth: '100%', height: 'auto', borderRadius: '12px', maxHeight: '600px', objectFit: 'contain' }} 
+                                <img
+                                    src={order.preview_image}
+                                    alt="Vista previa del diseño"
+                                    style={{ maxWidth: '100%', height: 'auto', borderRadius: '12px', maxHeight: '600px', objectFit: 'contain' }}
                                 />
                                 <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'white', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
                                     <div style={{ fontSize: '1rem', color: '#01A0AD', fontWeight: '800' }}>
@@ -126,7 +126,7 @@ export default function OrderShow() {
 
                     {/* Right Column: Order Info */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                        
+
                         {/* Status Bubbles Explanation */}
                         <div style={{ background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)', padding: '1.25rem', borderRadius: '20px', border: '1px solid #bae6fd' }}>
                             <h4 style={{ margin: '0 0 0.75rem', fontSize: '0.9rem', color: '#0369a1', fontWeight: '900', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -177,7 +177,7 @@ export default function OrderShow() {
                         {/* Payment & Summary */}
                         <div style={{ background: '#0f172a', padding: '2rem', borderRadius: '24px', color: 'white', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
                             <h3 style={{ margin: '0 0 1.5rem', fontSize: '1rem', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                                Detalle Económico
+                                Detalles de pago
                             </h3>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1rem' }}>
@@ -194,7 +194,7 @@ export default function OrderShow() {
                                     <span>${parseFloat(order.total_price || 0).toFixed(2)} <small style={{ fontSize: '0.8rem', verticalAlign: 'middle', color: '#94a3b8' }}>MXN</small></span>
                                 </div>
                                 <div style={{ marginTop: '1rem', padding: '0.75rem', background: '#1e293b', borderRadius: '12px', fontSize: '0.85rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                    <i className="fas fa-shield-check" style={{ color: '#10b981' }}></i> 
+                                    <i className="fas fa-shield-check" style={{ color: '#10b981' }}></i>
                                     <span>ID Transacción: <strong style={{ color: 'white' }}>{order.transaction_id || 'N/A'}</strong></span>
                                 </div>
                             </div>
