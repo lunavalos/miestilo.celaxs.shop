@@ -45,12 +45,45 @@ export default function OrderShow() {
         <AdminLayout user={auth?.user}>
             <Head title={`Pedido #${order.id || ''}`} />
 
-            <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto', fontFamily: "'Montserrat', sans-serif" }}>
+            <style>{`
+                .order-container {
+                    padding: 2rem;
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    font-family: 'Montserrat', sans-serif;
+                }
+                .order-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+                    gap: 2.5rem;
+                    align-items: start;
+                }
+                @media (max-width: 768px) {
+                    .order-container { padding: 1.5rem; }
+                    .order-grid { gap: 1.5rem; }
+                }
+                @media (max-width: 480px) {
+                    .order-container { padding: 1rem 0.5rem; }
+                    .order-grid { 
+                        grid-template-columns: 1fr;
+                        gap: 1.25rem;
+                    }
+                    .order-header {
+                        text-align: center;
+                    }
+                    .order-header-links {
+                        justify-content: center !important;
+                    }
+                }
+            `}</style>
+
+            <div className="order-container">
                 {/* Header Section */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
-                    <div>
+                <div className="order-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+                    <div className="order-header-info">
                         <Link
                             href="/admin/dashboard"
+                            className="order-header-links"
                             style={{ color: '#01A0AD', textDecoration: 'none', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontWeight: '600' }}
                         >
                             <i className="fas fa-arrow-left"></i> Volver al Panel
@@ -61,7 +94,7 @@ export default function OrderShow() {
                         </p>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '0 auto' }}>
                         {statusLoading && <i className="fas fa-spinner fa-spin" style={{ color: '#01A0AD' }}></i>}
                         <div style={{ position: 'relative' }}>
                             <select
@@ -94,7 +127,7 @@ export default function OrderShow() {
                     </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '2.5rem', alignItems: 'start' }}>
+                <div className="order-grid">
                     {/* Left Column: Design Image */}
                     <div style={{ background: 'white', padding: '2rem', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', textAlign: 'center', border: '1px solid #f1f5f9' }}>
                         <h3 style={{ margin: '0 0 1.5rem', fontSize: '1.2rem', fontWeight: '800', color: '#1e293b', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

@@ -340,6 +340,12 @@ export default function AdminLayout({ children, activeTab, onTabChange }) {
                         display: none !important;
                     }
                 }
+
+                @media (max-width: 480px) {
+                    .admin-main > div:last-child {
+                        padding: 0.75rem !important;
+                    }
+                }
             `}</style>
         </div>
     );
