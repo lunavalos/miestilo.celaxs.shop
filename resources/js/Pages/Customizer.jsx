@@ -491,7 +491,7 @@ export default function Customizer({ auth }) {
                             {selectedModel ? (
                                 <div style={{ position: 'relative', width: '300px', height: '600px', background: 'white', borderRadius: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}>
                                     <PreviewCanvas
-                                        layers={layers}
+                                        layers={step < 3 ? [] : layers}
                                         updateLayer={updateLayer}
                                         transparentImage={getImageUrl(selectedModel.image_transparent)}
                                         normalImage={step === 2 ? getImageUrl(selectedModel.image_normal) : getImageUrl(selectedModel.image_transparent)}

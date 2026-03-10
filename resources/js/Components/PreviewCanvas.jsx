@@ -17,8 +17,10 @@ const PreviewCanvas = forwardRef(({
     const canvasRef = useRef(null);
     const bufferRef = useRef(null);
     const clipBufferRef = useRef(null);
+    const protectionBufferRef = useRef(null);
     const [overlayImg, setOverlayImg] = useState(null);
     const [maskImg, setMaskImg] = useState(null);
+    const [protectionImg, setProtectionImg] = useState(null);
     const [interaction, setInteraction] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -43,9 +45,14 @@ const PreviewCanvas = forwardRef(({
             clipBufferRef.current.width = CANVAS_W;
             clipBufferRef.current.height = CANVAS_H;
         }
+        if (!protectionBufferRef.current) {
+            protectionBufferRef.current = document.createElement('canvas');
+            protectionBufferRef.current.width = CANVAS_W;
+            protectionBufferRef.current.height = CANVAS_H;
+        }
     }, []);
 
-    // Cargar imagen normal (overlay con contorno)
+    // Cargar imagen normal/modelo
     useEffect(() => {
         if (normalImage) {
             setLoading(true);
@@ -53,18 +60,89 @@ const PreviewCanvas = forwardRef(({
             const absoluteUrl = normalImage.startsWith('http') ? normalImage : window.location.origin + normalImage;
             img.onload = () => {
                 setOverlayImg(img);
+                generateProtectionMask(img);
                 setLoading(false);
             };
             img.onerror = () => {
-                console.error('Error cargando contorno:', absoluteUrl);
+                console.error('Error cargando modelo:', absoluteUrl);
                 setOverlayImg(null);
+                setProtectionImg(null);
                 setLoading(false);
             };
             img.src = absoluteUrl;
         } else {
             setOverlayImg(null);
+            setProtectionImg(null);
         }
     }, [normalImage]);
+
+    // Generar máscara de protección para áreas NO blancas (cámaras, sensores, etc.)
+    const generateProtectionMask = (img) => {
+        if (!protectionBufferRef.current) return;
+        const pCanvas = protectionBufferRef.current;
+        const pCtx = pCanvas.getContext('2d');
+        pCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+        // Dibujar imagen original para extraer píxeles
+        const scale = Math.min(CANVAS_W / img.width, CANVAS_H / img.height);
+        const w = img.width * scale;
+        const h = img.height * scale;
+        const x = (CANVAS_W - w) / 2;
+        const y = (CANVAS_H - h) / 2;
+
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = CANVAS_W;
+        tempCanvas.height = CANVAS_H;
+        const tCtx = tempCanvas.getContext('2d');
+        tCtx.drawImage(img, x, y, w, h);
+
+        const imageData = tCtx.getImageData(0, 0, CANVAS_W, CANVAS_H);
+        const data = imageData.data;
+        const width = CANVAS_W;
+        const height = CANVAS_H;
+
+        // 1. Primer pase: Identificar píxeles a proteger
+        const mask = new Uint8Array(width * height);
+        for (let i = 0; i < data.length; i += 4) {
+            const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
+            if (a < 10) continue;
+
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            const chroma = max - min;
+            
+            // Umbrales más sensibles
+            // - chroma > 8: detecta colores aún más sutiles
+            // - max < 110: detecta más grises y bordes para evitar la línea blanca
+            if (chroma > 8 || max < 110) {
+                mask[i / 4] = 1;
+            }
+        }
+
+        // 2. Segundo pase: Dilatación (expandir protección 1px para evitar bordes dentados)
+        const finalMask = new Uint8Array(mask);
+        for (let y = 1; y < height - 1; y++) {
+            for (let x = 1; x < width - 1; x++) {
+                const idx = y * width + x;
+                if (mask[idx] === 0) {
+                    // Si algún vecino está protegido, protegeme a mi también
+                    if (mask[idx - 1] || mask[idx + 1] || mask[idx - width] || mask[idx + width]) {
+                        finalMask[idx] = 1;
+                    }
+                }
+            }
+        }
+
+        // 3. Aplicar máscara al canvas de protección
+        for (let i = 0; i < finalMask.length; i++) {
+            if (finalMask[i] === 0) {
+                data[i * 4 + 3] = 0; // Hacer transparente lo que NO está protegido
+            }
+        }
+
+        pCtx.putImageData(imageData, 0, 0);
+        setProtectionImg(true);
+    };
 
     // Cargar imagen de máscara (transparente)
     useEffect(() => {
@@ -87,22 +165,18 @@ const PreviewCanvas = forwardRef(({
         const bctx = bufferRef.current.getContext('2d', { willReadFrequently: true });
         const cctx = clipBufferRef.current.getContext('2d', { willReadFrequently: true });
 
-        // 1. REINICIO TOTAL DE ESTADOS
+        // 1. REINICIO Y LIMPIEZA
+        // Resetear estados para evitar que operaciones previas (como source-in) afecten el nuevo ciclo
         ctx.globalCompositeOperation = 'source-over';
-        bctx.globalCompositeOperation = 'source-over';
-        cctx.globalCompositeOperation = 'source-over';
         ctx.globalAlpha = 1;
+        bctx.globalCompositeOperation = 'source-over';
         bctx.globalAlpha = 1;
+        cctx.globalCompositeOperation = 'source-over';
         cctx.globalAlpha = 1;
 
-        // Limpiar
         ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
         bctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
         cctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
-
-        // Fondo blanco base (fuera de la funda)
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
         if (loading && !overlayImg) {
             ctx.fillStyle = '#9ca3af';
@@ -112,7 +186,7 @@ const PreviewCanvas = forwardRef(({
             return;
         }
 
-        // 2. Calcular dimensiones (Contain)
+        // 2. Calcular dimensiones (Contain) Basadas exclusivamente en overlayImg actual
         let rect = { x: 0, y: 0, w: CANVAS_W, h: CANVAS_H };
         if (overlayImg) {
             const scale = Math.min(CANVAS_W / overlayImg.width, CANVAS_H / overlayImg.height);
@@ -122,8 +196,9 @@ const PreviewCanvas = forwardRef(({
             rect.y = (CANVAS_H - rect.h) / 2;
         }
 
-        // 3. Dibujar modelo base como referencia (Paso 2 o fondo del Paso 3)
-        if (overlayImg) {
+        // 3. Dibujar modelo base SOLO si no hay diseño (para la vista inicial limpia)
+        // Si hay diseño, NO dibujamos el modelo aquí para evitar que el blanco original sangre en los bordes
+        if (overlayImg && layers.length === 0) {
             ctx.drawImage(overlayImg, rect.x, rect.y, rect.w, rect.h);
         }
 
@@ -137,12 +212,16 @@ const PreviewCanvas = forwardRef(({
             if (layer.type === 'background') {
                 bctx.fillStyle = layer.color || '#ffffff';
                 bctx.fillRect(0, 0, CANVAS_W, CANVAS_H); // Llenamos todo el buffer de color
-            } else if (layer.type === 'image' && layer.imgObject) {
-                const cx = layer.x + layer.width / 2;
-                const cy = layer.y + layer.height / 2;
-                bctx.translate(cx, cy);
-                bctx.rotate((layer.rotation || 0) * Math.PI / 180);
-                bctx.drawImage(layer.imgObject, -layer.width / 2, -layer.height / 2, layer.width, layer.height);
+            } else if (layer.type === 'image' && layer.src) {
+                // Usar la imagen directamente si ya está cargada en layer.imgObject
+                const imgToDraw = layer.imgObject;
+                if (imgToDraw) {
+                    const cx = layer.x + layer.width / 2;
+                    const cy = layer.y + layer.height / 2;
+                    bctx.translate(cx, cy);
+                    bctx.rotate((layer.rotation || 0) * Math.PI / 180);
+                    bctx.drawImage(imgToDraw, -layer.width / 2, -layer.height / 2, layer.width, layer.height);
+                }
             } else if (layer.type === 'text') {
                 const cx = layer.x + layer.width / 2;
                 const cy = layer.y + layer.height / 2;
@@ -158,33 +237,50 @@ const PreviewCanvas = forwardRef(({
             bctx.restore();
         }
 
-        // 5. Composición Final (Solo si hay diseños)
-        if (layers.length > 0 && maskImg && overlayImg) {
-            // A. Recortar diseño con la máscara
-            cctx.drawImage(maskImg, rect.x, rect.y, rect.w, rect.h);
-            cctx.globalCompositeOperation = 'source-in';
-            cctx.drawImage(bufferRef.current, 0, 0);
+        // 5. Composición Final
+        if (layers.length > 0) {
+            if (maskImg && overlayImg) {
+                // A. Recortar diseño con la máscara
+                cctx.drawImage(maskImg, rect.x, rect.y, rect.w, rect.h);
+                cctx.globalCompositeOperation = 'source-in';
+                cctx.drawImage(bufferRef.current, 0, 0);
 
-            // B. Dibujar diseño recortado sobre el canvas principal
-            ctx.drawImage(clipBufferRef.current, 0, 0);
+                // B. Dibujar diseño recortado sobre el canvas principal
+                ctx.drawImage(clipBufferRef.current, 0, 0);
 
-            // C. Proyectar sombras/detalles REALES (Multiply)
-            ctx.save();
-            ctx.globalCompositeOperation = 'multiply';
-            ctx.drawImage(overlayImg, rect.x, rect.y, rect.w, rect.h);
-            ctx.restore();
-        } else if (layers.length > 0 && !maskImg) {
-            // Fallback: Si no hay máscara, dibujar buffer directamente
-            ctx.drawImage(bufferRef.current, 0, 0);
+                // C. Proyectar sombras/detalles REALES (Multiply)
+                ctx.save();
+                ctx.globalCompositeOperation = 'multiply';
+                ctx.drawImage(overlayImg, rect.x, rect.y, rect.w, rect.h);
+                ctx.restore();
+
+                // D. Restaurar áreas protegidas (Cámaras, Sensores)
+                if (protectionImg && protectionBufferRef.current) {
+                    ctx.drawImage(protectionBufferRef.current, 0, 0);
+                }
+            } else {
+                // Fallback: Si no hay máscara (Paso 2 o error), dibujar buffer directamente
+                ctx.drawImage(bufferRef.current, 0, 0);
+            }
         }
 
-        // 6. Transformer (Siempre arriba)
+        // 6. FONDO FINAL Y LIMPIEZA
+        // Dibujamos blanco DETRÁS de todo lo que ya pintamos (solo en áreas transparentes)
+        // Esto evita la línea blanca en el contorno porque el color del diseño llega al borde real
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-over';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+        ctx.restore();
+
+        // 7. Transformer (Siempre arriba)
+        ctx.globalCompositeOperation = 'source-over';
         const selectedLayer = layers.find(l => l.id === selectedLayerId);
         if (selectedLayer && selectedLayer.visible && selectedLayer.type !== 'background') {
             drawTransformer(ctx, selectedLayer);
         }
 
-    }, [layers, selectedLayerId, overlayImg, maskImg, loading]);
+    }, [layers, selectedLayerId, overlayImg, maskImg, loading, protectionImg]);
 
     // ── TRANSFORMER ──────────────────────────────────────────────────
     const drawTransformer = (ctx, layer) => {
