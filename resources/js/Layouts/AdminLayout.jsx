@@ -105,9 +105,9 @@ export default function AdminLayout({ children, activeTab, onTabChange }) {
             <div className="admin-topbar">
                 <Link href="/" style={{ textDecoration: 'none' }}>
                     <img
-                        src="/images/logo-white.png"
+                        src="/images/celaxs-accesorios-para-celular-saltillo.png"
                         alt="CELAX Logo"
-                        style={{ height: '30px', objectFit: 'contain', filter: 'invert(1) brightness(0)' }}
+                        style={{ height: '40px', objectFit: 'contain' }}
                     />
                 </Link>
                 <button
