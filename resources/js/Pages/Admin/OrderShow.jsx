@@ -69,10 +69,10 @@ export default function OrderShow() {
                         gap: 1.25rem;
                     }
                     .order-header {
-                        text-align: center;
+                        text-align: left;
                     }
                     .order-header-links {
-                        justify-content: center !important;
+                        justify-content: left !important;
                     }
                 }
             `}</style>
@@ -94,7 +94,7 @@ export default function OrderShow() {
                         </p>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '0 auto' }}>
+                    <div style={{ display: 'flex', gap: '1rem' }}>
                         {statusLoading && <i className="fas fa-spinner fa-spin" style={{ color: '#01A0AD' }}></i>}
                         <div style={{ position: 'relative' }}>
                             <select
@@ -187,6 +187,14 @@ export default function OrderShow() {
                                     {order.address_line2 && <div><label style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Espec. Domicilio</label><p style={{ margin: 0, fontSize: '0.9rem', color: '#64748b' }}>{order.address_line2}</p></div>}
                                     <div><label style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Ubicación</label><p style={{ margin: 0, fontSize: '0.95rem' }}>{order.city}, {order.state} - {order.zip_code}</p></div>
                                     <div><label style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Teléfono</label><p style={{ margin: 0, fontWeight: '700' }}>{order.phone || '—'}</p></div>
+                                    {order.order_notes && (
+                                        <div style={{ marginTop: '0.5rem', padding: '0.75rem', background: '#fffbeb', borderRadius: '12px', border: '1px solid #fef3c7' }}>
+                                            <label style={{ fontSize: '0.72rem', color: '#92400e', textTransform: 'uppercase', fontWeight: '800', display: 'block', marginBottom: '0.25rem' }}>
+                                                <i className="fas fa-comment-alt"></i> Notas del Comprador
+                                            </label>
+                                            <p style={{ margin: 0, fontSize: '0.9rem', color: '#78350f', lineHeight: '1.4', fontWeight: '500' }}>{order.order_notes}</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -233,15 +241,7 @@ export default function OrderShow() {
                             </div>
                         </div>
 
-                        {/* Order Notes */}
-                        {order.order_notes && (
-                            <div style={{ background: '#fffbeb', padding: '1.75rem', borderRadius: '24px', border: '1px solid #fef3c7', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
-                                <h3 style={{ margin: '0 0 1rem', fontSize: '1rem', fontWeight: '900', color: '#92400e', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <i className="fas fa-comment-alt"></i> Notas del Comprador
-                                </h3>
-                                <p style={{ margin: 0, fontSize: '1rem', color: '#78350f', lineHeight: '1.7', fontWeight: '500' }}>{order.order_notes}</p>
-                            </div>
-                        )}
+
 
                     </div>
                 </div>

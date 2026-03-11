@@ -161,7 +161,7 @@ class OrderController extends Controller
             if ($stripeData['status'] === 'succeeded') {
                 $order->update([
                     'payment_status' => 'paid',
-                    'status' => 'en proceso',
+                    // 'status' => 'en proceso', // Se mantiene en 'pendiente' por defecto según requerimiento
                     'transaction_id' => $stripeData['id']
                 ]);
                 Log::info("Order {$order->id} confirmed as PAID via Stripe Intent {$stripeData['id']}");
