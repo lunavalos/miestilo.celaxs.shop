@@ -6,6 +6,7 @@ import axios from 'axios';
 export default function OrderShow() {
     const { order, auth } = usePage().props;
     const [statusLoading, setStatusLoading] = useState(false);
+    const [modalImage, setModalImage] = useState(null);
 
     const handleStatusUpdate = async (newStatus) => {
         if (!confirm(`¿Cambiar el estado del pedido #${order.id} a ${newStatus}?`)) return;
@@ -19,6 +20,15 @@ export default function OrderShow() {
         } finally {
             setStatusLoading(false);
         }
+    };
+
+    const downloadImage = (src, filename) => {
+        const link = document.createElement('a');
+        link.href = src;
+        link.download = filename || 'imagen-celaxs.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     if (!order) {
@@ -138,7 +148,8 @@ export default function OrderShow() {
                                 <img
                                     src={order.preview_image}
                                     alt="Vista previa del diseño"
-                                    style={{ maxWidth: '100%', height: 'auto', borderRadius: '12px', maxHeight: '600px', objectFit: 'contain' }}
+                                    onClick={() => setModalImage(order.preview_image)}
+                                    style={{ maxWidth: '100%', height: 'auto', borderRadius: '12px', maxHeight: '600px', objectFit: 'contain', cursor: 'pointer' }}
                                 />
                                 <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'white', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
                                     <div style={{ fontSize: '1rem', color: '#01A0AD', fontWeight: '800' }}>
@@ -155,6 +166,113 @@ export default function OrderShow() {
                                 <p style={{ fontWeight: '600' }}>No hay imagen de previsualización disponible</p>
                             </div>
                         )}
+
+                        {/* Detalle de Elementos de Personalización */}
+                        {(() => {
+                            const layers = order.customization_data?.layers || [];
+                            const images = layers.filter(l => l.type === 'image');
+                            const texts = layers.filter(l => l.type === 'text');
+                            const background = layers.find(l => l.type === 'background');
+
+                            if (images.length === 0 && texts.length === 0 && !background) return null;
+
+                            return (
+                                <div style={{ marginTop: '2.5rem', textAlign: 'left', background: '#f8fafc', padding: '1.5rem', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+                                    <h3 style={{ margin: '0 0 1.5rem', fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', borderBottom: '2px solid #e2e8f0', paddingBottom: '0.75rem' }}>
+                                        <i className="fas fa-microchip" style={{ color: '#01A0AD' }}></i> Elementos de la Funda
+                                    </h3>
+
+                                    {/* Imágenes */}
+                                    {images.length > 0 && (
+                                        <div style={{ marginBottom: '1.5rem' }}>
+                                            <h4 style={{ fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '800', marginBottom: '0.75rem' }}>
+                                                Imágenes Subidas ({images.length})
+                                            </h4>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '12px' }}>
+                                                {images.map((img, idx) => (
+                                                    <div key={idx} style={{ position: 'relative', background: 'white', padding: '5px', borderRadius: '8px', border: '1px solid #cbd5e1', transition: 'transform 0.2s' }}>
+                                                        <img 
+                                                            src={img.src} 
+                                                            alt={`Upload ${idx}`} 
+                                                            onClick={() => setModalImage(img.src)}
+                                                            style={{ width: '100%', height: '90px', objectFit: 'contain', cursor: 'pointer' }} 
+                                                        />
+                                                        <button 
+                                                            onClick={() => downloadImage(img.src, `personalizacion-${order.id}-${idx}.png`)}
+                                                            style={{
+                                                                position: 'absolute',
+                                                                top: '-8px',
+                                                                right: '-8px',
+                                                                background: '#01A0AD',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                borderRadius: '50%',
+                                                                width: '28px',
+                                                                height: '28px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                cursor: 'pointer',
+                                                                boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+                                                            }}
+                                                            title="Descargar imagen"
+                                                        >
+                                                            <i className="fas fa-download" style={{ fontSize: '0.8rem' }}></i>
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Tipografía */}
+                                    {texts.length > 0 && (
+                                        <div style={{ marginBottom: '1.5rem' }}>
+                                            <h4 style={{ fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '800', marginBottom: '0.75rem' }}>
+                                                Tipografía(s) Utilizada(s)
+                                            </h4>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                                {[...new Set(texts.map(t => t.fontFamily))].map((font, idx) => (
+                                                    <span key={idx} style={{ background: 'white', padding: '4px 12px', borderRadius: '20px', fontSize: '0.9rem', border: '1px solid #cbd5e1', fontWeight: '600' }}>
+                                                        {font}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Color de Texto */}
+                                    {texts.length > 0 && (
+                                        <div style={{ marginBottom: '1.5rem' }}>
+                                            <h4 style={{ fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '800', marginBottom: '0.75rem' }}>
+                                                Colores de Texto
+                                            </h4>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '10px' }}>
+                                                {[...new Set(texts.map(t => t.color))].map((color, idx) => (
+                                                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'white', padding: '5px 10px', borderRadius: '15px', border: '1px solid #cbd5e1' }}>
+                                                        <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: color, border: '1px solid #e2e8f0' }}></div>
+                                                        <span style={{ fontWeight: '700', fontSize: '0.85rem', color: '#1e293b' }}>{color.toUpperCase()}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Color de Fondo */}
+                                    {background && (
+                                        <div>
+                                            <h4 style={{ fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '800', marginBottom: '0.75rem' }}>
+                                                Color de Fondo
+                                            </h4>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: background.color, border: '2px solid #cbd5e1', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}></div>
+                                                <span style={{ fontWeight: '800', fontSize: '1rem', color: '#1e293b' }}>{background.color.toUpperCase()}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
                     </div>
 
                     {/* Right Column: Order Info */}
@@ -245,6 +363,55 @@ export default function OrderShow() {
 
                     </div>
                 </div>
+
+                {/* Modal de Previsualización */}
+                {modalImage && (
+                    <div 
+                        style={{
+                            position: 'fixed',
+                            top: 0, left: 0, right: 0, bottom: 0,
+                            background: 'rgba(0,0,0,0.85)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 9999,
+                            padding: '2rem'
+                        }}
+                        onClick={() => setModalImage(null)}
+                    >
+                        <div style={{ position: 'relative', maxWidth: '90%', maxHeight: '90%' }} onClick={e => e.stopPropagation()}>
+                            <button 
+                                onClick={() => setModalImage(null)}
+                                style={{
+                                    position: 'absolute',
+                                    top: '-40px',
+                                    right: 0,
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'white',
+                                    fontSize: '2rem',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <i className="fas fa-times"></i>
+                            </button>
+                            <img 
+                                src={modalImage} 
+                                alt="Vista ampliada" 
+                                style={{ maxWidth: '100%', maxHeight: '85vh', borderRadius: '12px', boxShadow: '0 0 30px rgba(0,0,0,0.5)' }} 
+                            />
+                            <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+                                <button 
+                                    onClick={() => downloadImage(modalImage, `preview-${order.id}.png`)}
+                                    className="btn btn-primary"
+                                    style={{ padding: '0.6rem 2rem' }}
+                                >
+                                    <i className="fas fa-download"></i> Descargar Imagen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </AdminLayout>
     );

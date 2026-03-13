@@ -101,18 +101,8 @@ export default function Login({ status, canResetPassword }) {
                             </label>
                         </div>
 
-                        <div className="flex items-center justify-end mt-6">
-                            {canResetPassword && (
-                                <Link
-                                    href={route('password.request')}
-                                    className="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                                    style={{ fontFamily: 'var(--font-secondary)' }}
-                                >
-                                    ¿Olvidaste tu contraseña?
-                                </Link>
-                            )}
-
-                            <PrimaryButton className="ml-4 btn btn-primary" disabled={processing} style={{ padding: '0.8rem 2rem', fontSize: '1rem' }}>
+                        <div className="flex items-center justify-center mt-6">
+                            <PrimaryButton className="btn btn-primary" disabled={processing} style={{ padding: '0.8rem 2rem', fontSize: '1rem', width: '100%' }}>
                                 Ingresar
                             </PrimaryButton>
                         </div>
