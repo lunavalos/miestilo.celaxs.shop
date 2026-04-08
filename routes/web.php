@@ -68,6 +68,13 @@ Route::prefix('api')->group(function () {
     });
 });
 
+Route::get('/admin', function () {
+    if (auth()->check()) {
+        return redirect()->route('admin.dashboard');
+    }
+    return redirect()->route('login');
+});
+
 // Public Pages
 Route::get('/personalizar', function () {
     return Inertia::render('Customizer');
