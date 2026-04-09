@@ -8,7 +8,7 @@
     <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="/storage/logos/cropped-celaxs-icono.png">
+    <link rel="icon" type="image/png" href="/storage/logos/celaxs-accesorios-para-celulares-fundas-iphone.png">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
