@@ -51,5 +51,5 @@ RUN echo "upload_max_filesize = 100M" > /usr/local/etc/php/conf.d/upload_limits.
 
 EXPOSE 80
 
-CMD chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache && apache2-foreground
+CMD chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache && php artisan storage:link && apache2-foreground
 
